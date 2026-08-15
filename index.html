@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Activaciones</title>
+    <style>
+        /* Estilos Globales */
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; background-color: #ffffff; }
+
+        /* --- ELEMENTOS COMPARTIDOS --- */
+        .ie-warning-bar { background-color: #2b2b2b; color: #ffffff; display: flex; align-items: center; padding: 8px 15px; font-size: 12px; width: 100%; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-shrink: 0; }
+        .ie-warning-bar .message { flex-grow: 1; }
+        .ie-warning-bar .btn-edge { background-color: #0078D7; color: white; border: 1px solid #005a9e; padding: 4px 12px; font-size: 12px; cursor: pointer; margin-right: auto; margin-left: 15px; }
+        .ie-warning-bar .more-info { color: #7bc0ff; text-decoration: underline; margin-right: 15px; cursor: pointer; }
+        .ie-warning-bar .close-icon { font-size: 14px; cursor: pointer; }
+
+        /* --- VISTA 1: LOGIN --- */
+        #login-view { background-color: #404040; height: 100%; display: flex; justify-content: center; align-items: center; }
+        .windows-security-dialog { background-color: #f0f0f0; width: 380px; border: 1px solid #0078D7; box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; }
+        .dialog-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background-color: #f0f0f0; font-size: 12px; color: #000; }
+        .close-btn { cursor: pointer; font-size: 14px; color: #000; }
+        .dialog-content { padding: 10px 25px 25px 25px; }
+        .dialog-content h2 { margin: 0 0 15px 0; font-size: 18px; font-weight: normal; color: #000; }
+        .dialog-content p.subtitle { margin: 0 0 15px 0; font-size: 13px; color: #333; }
+        .input-group { margin-bottom: 5px; }
+        .input-group input { width: 100%; padding: 4px; border: 1px solid #7a7a7a; font-size: 13px; box-sizing: border-box; }
+        .domain-text { font-size: 12px; color: #333; margin: 15px 0; }
+        .remember-group { display: flex; align-items: center; font-size: 12px; color: #000; margin-bottom: 25px; }
+        .remember-group input { margin: 0 8px 0 0; }
+        .dialog-buttons { display: flex; justify-content: space-between; padding: 0 25px 25px 25px; gap: 10px; }
+        .dialog-buttons button { flex: 1; padding: 4px 0; background-color: #e1e1e1; border: 1px solid #adadad; font-size: 13px; cursor: pointer; }
+        .error-message { color: red; font-size: 11px; margin-top: 5px; display: none; }
+
+        /* --- VISTA 2: PORTAL DE APLICACIONES --- */
+        #portal-view { display: none; flex-direction: column; height: 100%; background-color: #ffffff; box-sizing: border-box; }
+        .portal-header { background-color: #e3000f; color: white; display: flex; align-items: center; padding: 5px 20px; position: relative; height: 40px; flex-shrink: 0; }
+        .logo-container { width: 35px; height: 35px; border-radius: 50%; border: 1px solid white; display: flex; justify-content: center; align-items: center; font-size: 10px; font-weight: bold; font-family: Arial, sans-serif; margin-right: 150px; }
+        .portal-header h1 { font-size: 18px; font-weight: bold; margin: 0; font-family: Arial, sans-serif; }
+        .logout-link { position: absolute; right: 20px; top: 15px; color: #0000ff; font-size: 11px; text-decoration: underline; cursor: pointer; font-family: Arial, sans-serif; }
+        .portal-content { flex-grow: 1; display: flex; flex-direction: column; align-items: center; padding-top: 30px; background-color: #ffffff; }
+        .table-container { width: 500px; border: 1px solid #a0a0a0; margin-bottom: 20px; box-sizing: border-box; }
+        .table-header { background-color: #ffffff; text-align: center; font-weight: bold; font-size: 12px; padding: 4px; border-bottom: 1px solid #a0a0a0; font-family: Arial, sans-serif; }
+        .table-list { list-style: none; margin: 0; padding: 0; background-color: #ffffff; }
+        .table-list li { border-bottom: 1px solid #d0d0d0; padding: 2px 5px; }
+        .table-list a { color: #0055aa; text-decoration: underline; font-size: 11px; cursor: pointer; font-family: Arial, sans-serif; }
+        .scrollable-list { height: 165px; overflow-y: scroll; }
+
+        /* --- VISTA 3: SISACT ENTRY --- */
+        #sisact-entry-view { display: none; flex-direction: column; height: 100%; background-color: #ffffff; }
+        .sisact-wrapper { flex-grow: 1; display: flex; justify-content: center; align-items: center; position: relative; }
+        .sisact-box { width: 620px; border: 1px solid #cc0000; box-sizing: border-box; background-color: white; }
+        .sisact-box-header { background-color: #da291c; color: white; text-align: center; padding: 18px 0; font-size: 22px; font-weight: bold; font-family: Arial, sans-serif; border-bottom: 3px solid white; }
+        .sisact-box-header-inner { border-bottom: 1px solid #cc0000; }
+        .sisact-box-content { padding: 40px 30px 30px 30px; }
+        .sisact-columns { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .col-left { text-align: center; font-family: Arial, sans-serif; color: #003366; font-size: 11px; font-weight: bold; }
+        .claro-logo-large { width: 65px; height: 65px; background: radial-gradient(circle at 30% 30%, #ff4d4d, #cc0000); border-radius: 50%; color: white; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; margin: 0 auto 10px auto; box-shadow: inset -2px -2px 6px rgba(0,0,0,0.3); letter-spacing: -0.5px; }
+        .col-center { text-align: center; font-family: Arial, sans-serif; color: #003366; font-size: 12px; font-weight: bold; line-height: 1.8; }
+        .col-right { text-align: right; font-family: Arial, sans-serif; color: #004B87; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 5px; }
+        .globe-icon { font-size: 24px; color: #8faadc; vertical-align: middle; }
+        .ingresar-container { text-align: center; }
+        .ingresar-btn { display: inline-flex; align-items: center; color: #003366; font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; font-style: italic; cursor: pointer; }
+        .blue-dot { width: 18px; height: 18px; background: radial-gradient(circle at 30% 30%, #e6f0ff 0%, #000066 80%); border-radius: 50%; margin-right: 8px; box-shadow: 1px 1px 3px rgba(0,0,0,0.4); border: 1px solid #000033; }
+        .zoom-indicator { position: absolute; bottom: 5px; right: 20px; font-size: 11px; font-family: Arial, sans-serif; color: #555; }
+
+        /* --- VISTA 4: SISACT PRINCIPAL --- */
+        #sisact-main-view { display: none; flex-direction: column; height: 100%; background-color: #ffffff; border: 1px solid #777; box-sizing: border-box; }
+        .main-header { background-color: #da291c; color: white; display: flex; justify-content: space-between; align-items: center; padding: 5px 15px; height: 45px; flex-shrink: 0; font-family: Arial, sans-serif; }
+        .main-header-left { display: flex; align-items: center; }
+        .main-logo { width: 32px; height: 32px; background: radial-gradient(circle at 30% 30%, #ff4d4d, #cc0000); border-radius: 50%; border: 1px solid white; color: white; display: flex; justify-content: center; align-items: center; font-size: 9px; font-weight: bold; margin-right: 10px; box-shadow: inset -1px -1px 3px rgba(0,0,0,0.3); }
+        .main-header-left h1 { font-size: 16px; font-weight: bold; margin: 0; }
+        .main-header-right { text-align: right; font-size: 11px; font-weight: bold; line-height: 1.4; }
+        
+        .main-nav { background-color: #333333; display: flex; height: 22px; flex-shrink: 0; border-bottom: 2px solid #da291c; position: relative; z-index: 10; }
+        .nav-item { color: white; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; padding: 0 8px; display: flex; align-items: center; justify-content: space-between; width: 100px; border-right: 1px solid #ffffff; cursor: pointer; box-sizing: border-box; position: relative; }
+        .nav-item:last-child { width: auto; padding-right: 30px; border-right: none; }
+        .nav-arrow { font-size: 8px; }
+        .dropdown-menu { display: none; position: absolute; top: 22px; left: -1px; background-color: #333333; border-left: 1px solid #ffffff; border-right: 1px solid #ffffff; border-bottom: 1px solid #ffffff; min-width: 170px; z-index: 100; box-sizing: border-box; }
+        .nav-item:hover .dropdown-menu { display: block; }
+        .dropdown-item { padding: 4px 8px; border-bottom: 1px solid #ffffff; color: white; font-size: 11px; font-family: Arial, sans-serif; font-weight: bold; text-align: left; line-height: 1.2; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .dropdown-item:hover { background-color: #555555; }
+        .w-evaluacion { width: 190px; } .w-activacion { width: 180px; } .w-consulta { width: 220px; } .w-reportes { width: 150px; } .w-postventa { width: 180px; } .w-vas { width: 120px; }
+
+        .main-content-area { flex-grow: 1; background-color: #ffffff; position: relative; overflow-y: scroll; overflow-x: hidden; padding-bottom: 40px; }
+        .main-content-area::-webkit-scrollbar { width: 16px; height: 16px; }
+        .main-content-area::-webkit-scrollbar-track { background: #f0f0f0; border-left: 1px solid #d0d0d0; border-top: 1px solid #d0d0d0; }
+        .main-content-area::-webkit-scrollbar-thumb { background: #cdcdcd; border: 1px solid #f0f0f0; }
+
+        .status-bar { background-color: #f0f0f0; border-top: 1px solid #d0d0d0; height: 22px; display: flex; justify-content: space-between; align-items: center; padding: 0 15px; font-size: 11px; color: #333; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; flex-shrink: 0; }
+
+        /* --- FORMULARIOS SEC Y DATOS DEL CLIENTE --- */
+        .sec-form-container { width: 100%; box-sizing: border-box; padding: 5px; }
+        .sec-form-box { border: 1px solid #a9c6e2; background-color: white; font-family: Arial, sans-serif; font-size: 11px; margin-bottom: 5px; position: relative; }
+        .sec-form-title { background: linear-gradient(to bottom, #f0f4fa, #dbe8f9); color: #003399; font-weight: bold; text-align: center; padding: 4px; border-bottom: 1px solid #a9c6e2; font-size: 12px; }
+        .sec-form-title-left { background: linear-gradient(to bottom, #f0f4fa, #dbe8f9); color: #003399; font-weight: bold; text-align: left; padding: 4px 10px; border-bottom: 1px solid #a9c6e2; font-size: 12px; }
+        .sec-form-tabs { background-color: #f0f4fa; border-bottom: 1px solid #a9c6e2; padding: 0 10px; display: flex; }
+        .sec-tab-active { color: #003399; font-weight: bold; padding: 3px 10px; border-left: 1px solid #a9c6e2; border-right: 1px solid #a9c6e2; background-color: white; border-top: 1px solid #a9c6e2; margin-top: 3px; font-size: 10px; }
+        .sec-form-body { padding: 10px 15px; }
+        .sec-table { width: 100%; border-collapse: separate; border-spacing: 0 5px; font-size: 11px; color: #003399; font-weight:bold; }
+        .sec-table-borders th { background: linear-gradient(to bottom, #f0f4fa, #dbe8f9); border: 1px solid #a9c6e2; padding: 4px; color:#003399; font-weight:bold; text-align:center;}
+        .sec-table-borders td { border: 1px solid #a9c6e2; padding: 4px; text-align:center; font-weight:bold; color:#003399;}
+        .sec-label { color: #003399; font-weight: bold; text-align: left; white-space: nowrap; width: 90px; }
+        .sec-input { border: 1px solid #7a7a7a; padding: 2px 3px; font-size: 11px; font-family: Arial, sans-serif; background-color: #ffffff; color: black; font-weight:normal; }
+        .sec-input:disabled { background-color: #e8f0fe; color: black; border: 1px solid #a9c6e2;}
+        .sec-select-pdv { width: 400px; } .sec-select-small { width: 130px; }
+        .sec-btn-validacion { background-color: #cbdcf3; border: 1px solid #003399; color: #000000; font-weight: bold; padding: 3px 25px; cursor: pointer; font-family: Arial, sans-serif; font-size: 11px; margin-top: 5px; }
+        .sec-btn-validacion:hover { background-color: #a9c6e2; }
+        .link-detalle { color: #003399; font-weight: bold; text-decoration: underline; cursor: pointer; font-size: 11px; font-family: Arial, sans-serif; }
+
+        /* --- SPINNER --- */
+        .loading-spinner { display: none; margin: 40px auto; width: 40px; height: 40px; border: 5px solid #f3f3f3; border-top: 5px solid #666666; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- MODALES Y OVERLAYS --- */
+        .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 999; }
+        
+        .windows-modal { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #ffffff; border: 1px solid #0078D7; box-shadow: 2px 2px 10px rgba(0,0,0,0.4); z-index: 1000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 5px 10px; font-size: 12px; color: #000; border-bottom: 1px solid #d0d0d0; }
+        .modal-header-blue { background: linear-gradient(to right, #e8f0fe, #dbe8f9); color:#003399; font-weight:bold; }
+        .modal-close { cursor: pointer; font-size: 14px; color:red; font-weight:bold;}
+        .modal-body { padding: 15px; font-size: 12px; }
+        
+        /* VBScript Specifics */
+        .vb-alert { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; background: #f0f0f0; border: 1px solid #999; box-shadow: 2px 2px 5px rgba(0,0,0,0.3); z-index: 2000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .vb-header { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 3px 8px; font-size: 12px; border-bottom: 1px solid #ccc; }
+        .vb-body { display: flex; padding: 25px 20px; align-items: center; font-size: 12px; }
+        .vb-icon { font-size: 30px; color: #003399; margin-right: 15px; font-weight:bold; background: white; border-radius: 50%; border:2px solid #003399; width: 35px; height: 35px; display:flex; justify-content:center; align-items:center;}
+        .vb-footer { text-align: center; padding: 15px; }
+        .vb-btn { padding: 4px 25px; margin: 0 5px; font-size: 12px; background: #e1e1e1; border: 1px solid #777; cursor: pointer; }
+
+        .list-box { width: 250px; height: 120px; border: 1px solid #a9c6e2; font-family: Arial, sans-serif; font-size: 11px; overflow-y: scroll; }
+        .list-box option { padding: 2px; }
+
+        /* Tablas Consulta SEC */
+        .consulta-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11px; margin-top: 10px; }
+        .consulta-table th { background: linear-gradient(to bottom, #f0f4fa, #dbe8f9); color: #003399; font-weight: bold; text-align: center; border: 1px solid #a9c6e2; padding: 5px; }
+        .consulta-table td { border: 1px solid #a9c6e2; padding: 4px; text-align: center; color: #003399; font-weight: bold; background: #ffffff; }
+
+    </style>
+</head>
+<body>
+
+    <datalist id="listaEquipos">
+        <option value="APP IP17PMAX256GB CQ"></option><option value="APP IP17PMAX256GB DH"></option><option value="APP IP17PMAX256GB SV"></option>
+        <option value="XIA 17T 512GB NG 5G WATCH"></option><option value="XIA 17T PRO 512GB NG 5G WATCH"></option><option value="XIA 17T PRO 512GB VT 5G"></option>
+        <option value="XIA 17ULT512/15GB BL 16GB 5G"></option>
+        <option value="SMG A57512/12A576 WN 5G"></option><option value="SMG GA07128/4GA07 BK"></option><option value="SMG GA37256/8A376 GA 5G"></option>
+        <option value="SMG GA57256/8G576 DR 5G"></option><option value="SMG GS25FE256G731 JB 5G"></option><option value="SMG GS26U256GS948 BK 5G"></option>
+        <option value="SMG GXA16128/4165 BK"></option><option value="SMG GXA175G128/4G BK 5G"></option><option value="SMG GXA27256GA276 BK 5G"></option>
+        <option value="HOR 600SMART256GB LT 5G"></option><option value="HOR MAGIC6LT512G ND 5G"></option><option value="HOR MAGIC6LT512G UO 5G HEADPHON PRO"></option>
+        <option value="HOR MAGIC6LT512G VQ 5G HEADPHON PRO"></option><option value="HOR MAGIC6PRO512G NG 5G EARBUDS CLIP"></option><option value="HOR X5C 128GB LT"></option>
+        <option value="HOR X5D 128GB ND WEIRD EARBUDS"></option><option value="HOR X5D 256GB ND WEIRD EARB"></option>
+        <option value="APP IPH13PMX256GP GF PROCESADOR A15"></option><option value="APP IPH15128GBBLK BK"></option>
+    </datalist>
+
+    <div id="login-view">
+        <div class="windows-security-dialog">
+            <div class="dialog-header"><span>Seguridad de Windows</span><span class="close-btn">✕</span></div>
+            <div class="dialog-content">
+                <h2>iexplore.exe</h2><p class="subtitle">Conectándose a intranetwebapp.</p>
+                <div class="input-group"><input type="text" id="username" placeholder="Nombre de usuario" autocomplete="off"></div>
+                <div class="input-group"><input type="password" id="password" placeholder="Contraseña"></div>
+                <div id="errorMsg" class="error-message">Credenciales incorrectas. Intente nuevamente.</div>
+                <div class="domain-text">Dominio: PDC</div>
+                <div class="remember-group"><input type="checkbox" id="remember"><label for="remember">Recordar mis credenciales</label></div>
+            </div>
+            <div class="dialog-buttons"><button id="btnAceptar">Aceptar</button><button id="btnCancelar">Cancelar</button></div>
+        </div>
+    </div>
+
+    <div id="portal-view">
+        <div class="ie-warning-bar"><span class="message">Estás en modo Internet Explorer. La mayoría de las páginas funcionan mejor en Microsoft Edge.</span><button class="btn-edge">Abrir en Microsoft Edge</button><span class="more-info">Más información</span><span class="close-icon">✕</span></div>
+        <div class="portal-header"><div class="logo-container">Claro-</div><h1>Portal de Aplicaciones</h1><a class="logout-link">Salir</a></div>
+        <div class="portal-content">
+            <div class="table-container">
+                <div class="table-header">Accesos Particulares</div>
+                <div class="scrollable-list">
+                    <ul class="table-list">
+                        <li><a>Administración Mi Claro</a></li><li><a>Autoservicio Clave Unica</a></li><li><a>Centro de Soporte de BlackBerry</a></li><li><a>Claro Empresas</a></li><li><a>Creación de Centros y Bodegas</a></li><li><a>Customer Care</a></li><li><a>Diagnóstico Técnico de Servicio Fijo</a></li><li><a>Digitalización NINTEX</a></li><li><a>Gestion y Publicacion de Encuestas</a></li><li><a>IN VPN Janus - Atención al Cliente</a></li><li><a>ISTM</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="table-container">
+                <div class="table-header">Aplicaciones</div>
+                <div>
+                    <ul class="table-list">
+                        <li><a>Claro Te Recomienda</a></li><li><a>GESTOR DE CAMPAÑAS</a></li><li><a>SIAC Postpago</a></li><li><a>SIAC UNICO</a></li><li><a>SISACT PREPAGO</a></li><li><a id="btnSistemaActivaciones">Sistema de Activaciones</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sisact-entry-view">
+        <div class="ie-warning-bar"><span class="message">Estás en modo Internet Explorer. La mayoría de las páginas funcionan mejor en Microsoft Edge.</span><button class="btn-edge">Abrir en Microsoft Edge</button><span class="more-info">Más información</span><span class="close-icon">✕</span></div>
+        <div class="sisact-wrapper">
+            <div class="sisact-box">
+                <div class="sisact-box-header">Sistema de Activaciones - SISACT</div>
+                <div class="sisact-box-header-inner"></div>
+                <div class="sisact-box-content">
+                    <div class="sisact-columns">
+                        <div class="col-left"><div class="claro-logo-large">Claro-</div>América Móvil Peru</div>
+                        <div class="col-center"><div>Usuario: E8713483 - Usuario de Prueba</div><div>Area: SERVICIO AL CLIENTE</div></div>
+                        <div class="col-right">américa <span class="globe-icon">🌐</span> móvil</div>
+                    </div>
+                    <div class="ingresar-container"><div class="ingresar-btn" id="btnIngresarSisact"><div class="blue-dot"></div> ingresar</div></div>
+                </div>
+            </div>
+            <div class="zoom-indicator">🔍 100% ▾</div>
+        </div>
+    </div>
+
+    <div id="sisact-main-view">
+        <div class="ie-warning-bar"><span class="message">Estás en modo Internet Explorer. La mayoría de las páginas funcionan mejor en Microsoft Edge.</span><button class="btn-edge">Abrir en Microsoft Edge</button><span class="more-info">Más información</span><span class="close-icon">✕</span></div>
+        <div class="main-header">
+            <div class="main-header-left"><div class="main-logo">Claro-</div><h1>SISACT - Sistema de Activaciones</h1></div>
+            <div class="main-header-right"><div>Usuario: E8713483 - Usuario de Prueba</div><div>Nodo : 51</div></div>
+        </div>
+
+        <div class="main-nav">
+            <div class="nav-item">Evaluacion <span class="nav-arrow">▼</span>
+                <div class="dropdown-menu w-evaluacion">
+                    <div class="dropdown-item" id="menuEvaluacionDespachoPDV">Evaluacion Despacho PDV</div>
+                    <div class="dropdown-item">Evaluacion diferidos</div>
+                    <div class="dropdown-item">Adjuntar Archivos Portabilidad Despacho PDV</div>
+                    <div class="dropdown-item">Portabilidad <span class="nav-arrow">▼</span></div>
+                    <div class="dropdown-item">Adjuntar Archivos Portabilidad Centralizado</div>
+                    <div class="dropdown-item">Servicios Fijos</div>
+                </div>
+            </div>
+            <div class="nav-item">Activacion <span class="nav-arrow">▼</span>
+                <div class="dropdown-menu w-activacion">
+                    <div class="dropdown-item">Activacion Persona Natural</div>
+                    <div class="dropdown-item">Activaciones Enviadas</div>
+                    <div class="dropdown-item">Venta Express</div>
+                    <div class="dropdown-item">Pool de Contratos <span class="nav-arrow">▼</span></div>
+                    <div class="dropdown-item">Portabilidad <span class="nav-arrow">▼</span></div>
+                    <div class="dropdown-item">Venta Express Portabilidad</div>
+                </div>
+            </div>
+            <div class="nav-item">Consulta <span class="nav-arrow">▼</span>
+                <div class="dropdown-menu w-consulta">
+                    <div class="dropdown-item" id="menuConsultaSEC">Consulta SEC</div>
+                    <div class="dropdown-item">Pool de Solicitudes de Portabilidad Movil</div>
+                    <div class="dropdown-item">Pool de Solicitudes de Portabilidad Fijo</div>
+                    <div class="dropdown-item">Consulta Sisact Prepago</div>
+                    <div class="dropdown-item">Consulta de venta DTH</div>
+                    <div class="dropdown-item">Buscar Promociones</div>
+                    <div class="dropdown-item">Consulta Stock</div>
+                    <div class="dropdown-item">Comparativo Planes y Equipo</div>
+                    <div class="dropdown-item">Validacion Correo Cliente</div>
+                </div>
+            </div>
+            <div class="nav-item">Reportes <span class="nav-arrow">▼</span><div class="dropdown-menu w-reportes"><div class="dropdown-item">Consulta Venta en Cuotas</div></div></div>
+            <div class="nav-item">Post-Venta <span class="nav-arrow">▼</span>
+                <div class="dropdown-menu w-postventa">
+                    <div class="dropdown-item">Migracion de prepago a postpago</div>
+                    <div class="dropdown-item" id="menuRenovacionPrepago">Renovacion Prepago</div>
+                    <div class="dropdown-item" id="menuRenovacionPostpago">Renovacion Postpago</div>
+                    <div class="dropdown-item">Reposicion Pack Prepago</div>
+                    <div class="dropdown-item">Renovacion Postpago CAC</div>
+                    <div class="dropdown-item">Documentos a Imprimir <span class="nav-arrow">▼</span></div>
+                    <div class="dropdown-item">Devoluciones</div>
+                    <div class="dropdown-item">Protección Móvil <span class="nav-arrow">▼</span></div>
+                    <div class="dropdown-item">Entrega Pickup</div>
+                </div>
+            </div>
+            <div class="nav-item">VAS <span class="nav-arrow">▼</span><div class="dropdown-menu w-vas"><div class="dropdown-item">Claromusica</div><div class="dropdown-item">Claro Video</div></div></div>
+        </div>
+
+        <div class="main-content-area" id="sisact-workspace">
+            </div>
+
+        <div class="status-bar"><div>http://intranetsisact2/sisact/Acceso.aspx</div><div>🔍 100% ▾</div></div>
+    </div>
+
+    <div class="overlay" id="modalOverlay"></div>
+
+    <div class="windows-modal" id="customAlertBox" style="width: 380px;">
+        <div class="modal-header"><span>Mensaje de la página web</span><span class="modal-close" onclick="cerrarAlertaInicial()">✕</span></div>
+        <div class="modal-body" style="display:flex; align-items:center;">
+            <span style="font-size:28px; color:#ffcc00; margin-right:15px;">⚠️</span>
+            <span id="alert-text">Cliente es Full Claro, tiene el beneficio entregado en su servicio MOVIL Y FIJO.</span>
+        </div>
+        <div style="background:#f0f0f0; padding:10px; text-align:right; border-top:1px solid #d0d0d0;">
+            <button class="sec-btn-validacion" style="margin:0;" onclick="cerrarAlertaInicial()">Aceptar</button>
+        </div>
+    </div>
+
+    <div class="windows-modal" id="modalServicios" style="width: 550px;">
+        <div class="sec-form-title-left" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Servicios Adicionales - Plan Max Ilimitado 69.90</span>
+        </div>
+        <div class="modal-body">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="color:#003399; font-weight:bold; font-size:11px; margin-bottom:5px; text-decoration:underline;">Servicios Adicionales</div>
+                    <select id="listDisponibles" class="list-box" multiple>
+                        <option>CONSUMO ADICIONAL</option>
+                        <option>CONSUMO EXACTO</option>
+                        <option>TELETRABAJO 15GB</option>
+                        <option>TELETRABAJO 30GB</option>
+                        <option>TELETRABAJO 5GB</option>
+                        <option>TELETRABAJO 60GB</option>
+                    </select>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:10px; margin: 0 15px;">
+                    <button class="sec-btn-validacion" style="margin:0;" onclick="moverServicio('listDisponibles', 'listContratados')">Agregar ></button>
+                    <button class="sec-btn-validacion" style="margin:0;" onclick="moverServicio('listContratados', 'listDisponibles')">&lt; Quitar</button>
+                    <button class="sec-btn-validacion" style="margin:0;" onclick="document.getElementById('listContratados').innerHTML=''">Limpiar</button>
+                </div>
+                <div>
+                    <div style="color:#003399; font-weight:bold; font-size:11px; margin-bottom:5px; text-decoration:underline;">Servicios Contratados</div>
+                    <select id="listContratados" class="list-box" multiple></select>
+                </div>
+            </div>
+            <div style="text-align:center; margin-top:15px;">
+                <button class="sec-btn-validacion" onclick="cerrarServicios()">Cerrar y Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="windows-modal" id="modalCuotasRP" style="width: 400px;">
+        <div class="sec-form-title-left" style="background:#dbe8f9; color:#003399; font-size:12px; padding:4px; border:none; display:flex; justify-content:space-between;">
+            <span>Cuotas</span>
+            <span class="modal-close" onclick="cerrarCuotas()" style="color:red;">✕</span>
+        </div>
+        <div class="modal-body" style="background:#f0f4fa; border:1px solid #a9c6e2; margin:10px; padding:15px;">
+            <table style="width:100%; font-size:11px; font-weight:bold; color:#003399;">
+                <tr>
+                    <td>Nro Cuotas</td>
+                    <td><select class="sec-input" id="valNroCuotas"><option>SELECCIONE...</option><option>12 CUOTAS</option></select></td>
+                    <td colspan="2"></td>
+                </tr>
+                <tr>
+                    <td>Monto Cuota Inicial</td>
+                    <td><input type="text" class="sec-input" value="0.00" style="width:60px;"></td>
+                    <td>Monto Cuota</td>
+                    <td><input type="text" class="sec-input" id="valMontoCuotaCalc" style="width:60px; background:#e8f0fe; color:black;" disabled></td>
+                </tr>
+            </table>
+            <div style="text-align:center; margin-top:15px;">
+                <button class="sec-btn-validacion" id="btnGuardarCuotasRP">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="windows-modal" id="modalProactiva" style="width: 700px; font-family:Arial, sans-serif;">
+        <div class="modal-header">
+            <span>Sisact Evaluación Proactiva - Diálogo de página web</span>
+            <span class="modal-close" onclick="cerrarModalProactiva()">✕</span>
+        </div>
+        <div class="modal-body" style="padding:0;">
+            <div class="sec-form-title-left" style="text-align:center; border:none;">Evaluación Proactiva</div>
+            <div style="padding:10px; font-size:10px; color:#003399; font-weight:bold; line-height:1.6;">
+                <div>CAMPAÑA <span style="font-weight:normal; margin-left:10px;">PORTABILIDAD TELEVENTAS</span></div>
+                <div>PLAZO <span style="font-weight:normal; margin-left:25px;">SIN PLAZO/POR TIEMPO ILIMITADO</span></div>
+                <div style="display:flex;">
+                    <div style="width:50px;">PLAN 1</div>
+                    <div style="font-weight:normal;">Max Ilimitado 69.90<br>CHIP SUELTO</div>
+                </div>
+            </div>
+            <table class="sec-table sec-table-borders" style="margin:10px; width:calc(100% - 20px);">
+                <tr><th>Plan</th><th>Renta Adelantada</th><th>Pago Inicial</th></tr>
+                <tr><td style="text-align:left;"><input type="radio"> MAX ILIMITADO 289.90</td><td>0.00</td><td>0.00</td></tr>
+                <tr><td style="text-align:left;"><input type="radio"> MAX ILIMITADO 189.90</td><td>0.00</td><td>0.00</td></tr>
+                <tr><td style="text-align:left;"><input type="radio"> MAX ILIMITADO 159.90</td><td style="color:red;">No aplica a condiciones de venta</td><td>-</td></tr>
+                <tr><td style="text-align:left;"><input type="radio"> MAX ILIMITADO 109.90</td><td style="color:red;">No aplica a condiciones de venta</td><td>-</td></tr>
+                <tr><td style="text-align:left;"><input type="radio"> MAX ILIMITADO 95.90</td><td style="color:red;">No aplica a condiciones de venta</td><td>-</td></tr>
+                <tr><td style="text-align:left;"><input type="radio"> MAX ILIMITADO 79.90</td><td style="color:red;">No aplica a condiciones de venta</td><td>-</td></tr>
+                <tr><td style="text-align:left;"><input type="radio" checked> MAX ILIMITADO 69.90</td><td style="color:red;">No aplica a condiciones de venta</td><td>-</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="windows-modal" id="modalDescuento" style="width: 350px;">
+        <div class="sec-form-title-left" style="display:flex; justify-content:space-between; background:white; border:none; border-bottom:1px solid #a9c6e2; padding:10px;">
+            <span>DETALLE DEL DESCUENTO</span>
+            <span class="modal-close" onclick="continuarGrabar1()">X</span>
+        </div>
+        <div class="modal-body">
+            <table class="sec-table" style="text-align:center; color:#003399; font-weight:bold;">
+                <tr style="border-bottom:1px solid #a9c6e2;">
+                    <th style="border-bottom:1px solid #003399;">Línea</th>
+                    <th style="border-bottom:1px solid #003399;">Plan</th>
+                    <th style="border-bottom:1px solid #003399;">Descuento 50%</th>
+                </tr>
+                <tr><td>51966310xxx</td><td>Max 39.90</td><td>No</td></tr>
+                <tr><td>51939370xxx</td><td>Max Ilimitado 69.90</td><td>No</td></tr>
+            </table>
+            <div style="text-align:center; margin-top:20px;">
+                <button class="sec-btn-validacion" onclick="continuarGrabar1()">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="windows-modal" id="modalAfiliacion" style="width: 550px;">
+        <div class="modal-header">
+            <span>Registrar Afiliación / Desafiliación Individuales - Diálogo de página web</span>
+            <span class="modal-close" onclick="continuarGrabar2()">✕</span>
+        </div>
+        <div class="modal-body" style="padding:0;">
+            <div class="sec-form-title-left" style="text-align:center; border:none;">Registrar Afiliación / Desafiliación Individuales</div>
+            <div style="padding:15px; font-weight:bold; color:#003399; font-size:11px;">
+                <div>DATOS DEL CLIENTE</div>
+                <div style="display:flex; margin-top:5px; align-items:center;">
+                    <div style="width:120px;">Nombre del Cliente:</div>
+                    <input type="text" class="sec-input" value="HECTOR ADRIAN PACHERRE TORRES" disabled style="width:100%; color:black;">
+                </div>
+                <div style="display:flex; margin-top:5px; align-items:center;">
+                    <div style="width:120px;">Tipo de Documento:</div>
+                    <select class="sec-input" disabled style="width:100px;"><option>DNI</option></select>
+                    <div style="margin-left:auto; margin-right:10px;">Número de Documento:</div>
+                    <input type="text" class="sec-input" value="74174478" disabled style="width:100px; color:black;">
+                </div>
+                
+                <div style="margin-top:15px;">DATOS DE CUENTA/TARJETA</div>
+                <div style="display:flex; margin-top:5px; align-items:center;">
+                    <div style="width:120px;">Origen de Solicitud:</div>
+                    <input type="radio" checked> Tarjeta
+                </div>
+                <div style="display:flex; margin-top:5px; align-items:center;">
+                    <div style="width:120px;">Monto Max:</div>
+                    <input type="radio"> Sin Monto <input type="radio" checked style="margin-left:10px;"> Con Monto
+                    <input type="text" class="sec-input" value="69.90" disabled style="margin-left:10px; width:50px; color:black; text-align:center;">
+                    <button class="sec-btn-validacion" style="margin:0 0 0 10px; padding:2px 10px;">Consultar</button>
+                </div>
+                <div style="display:flex; margin-top:10px; align-items:center;">
+                    <input type="checkbox" checked> Nueva Tarjeta
+                    <span style="color:red; font-size:10px; margin-left:180px;">Se esta afiliando una<br>nueva tarjeta</span>
+                </div>
+                <div style="display:flex; margin-top:5px; align-items:center;">
+                    <div style="width:120px;">Correo Electrónico:</div>
+                    <input type="text" class="sec-input" value="ENDOCORE5@GMAIL.COM" style="width:200px;">
+                </div>
+                <div style="display:flex; margin-top:5px; align-items:center;">
+                    <div style="width:120px;">Teléfono a Notificar:</div>
+                    <input type="text" class="sec-input" style="width:200px;">
+                </div>
+                <div style="text-align:right; margin-top:15px;">
+                    <button class="sec-btn-validacion" style="margin:0;">Enviar Link</button>
+                    <button class="sec-btn-validacion" style="margin:0;" onclick="continuarGrabar2()">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="vb-alert" id="modalVBScript1">
+        <div class="vb-header"><span>VBScript</span><span class="modal-close" onclick="continuarGrabar3()">✕</span></div>
+        <div class="vb-body">
+            <div class="vb-icon">?</div>
+            <div>VERIFIQUE LOS NOMBRES Y APELLIDOS DEL CLIENTE. Si son correctos presione Sí, caso contrario la SEC irá a Créditos para validación y corrección respectiva.</div>
+        </div>
+        <div class="vb-footer">
+            <button class="vb-btn" onclick="continuarGrabar3()">Sí</button>
+            <button class="vb-btn" onclick="continuarGrabar3()">No</button>
+        </div>
+    </div>
+
+    <div class="vb-alert" id="modalVBScript2">
+        <div class="vb-header"><span>VBScript</span><span class="modal-close" onclick="continuarGrabar4()">✕</span></div>
+        <div class="vb-body">
+            <div class="vb-icon">?</div>
+            <div>SEC no cumple con autonomia, cliente debe ser evaluado por Créditos. ¿Desea adicionalmente adjuntar sustentos de ingreso?</div>
+        </div>
+        <div class="vb-footer">
+            <button class="vb-btn" onclick="continuarGrabar4()">Sí</button>
+            <button class="vb-btn" onclick="continuarGrabar4()">No</button>
+        </div>
+    </div>
+
+    <div class="vb-alert" id="modalVBScriptTopeRP">
+        <div class="vb-header"><span>VBScript</span><span class="modal-close" onclick="cerrarModalEspecialRP()">✕</span></div>
+        <div class="vb-body">
+            <div class="vb-icon">?</div>
+            <div>La línea tendrá el siguiente tope de consumo: (*) Consumo Exacto ¿Desea Continuar?</div>
+        </div>
+        <div class="vb-footer">
+            <button class="vb-btn" onclick="continuarRP1()">Sí</button>
+            <button class="vb-btn" onclick="cerrarModalEspecialRP()">No</button>
+        </div>
+    </div>
+
+    <div class="windows-modal" id="modalReintegroRP" style="width: 380px;">
+        <div class="modal-header"><span>Mensaje de la página web</span><span class="modal-close" onclick="cerrarModalEspecialRP()">✕</span></div>
+        <div class="modal-body" style="display:flex; align-items:center;">
+            <span style="font-size:28px; color:#ffcc00; margin-right:15px;">⚠️</span>
+            <span>El monto del Reintegro del Equipo es S/. 0.00</span>
+        </div>
+        <div style="background:#f0f0f0; padding:10px; text-align:right; border-top:1px solid #d0d0d0;">
+            <button class="sec-btn-validacion" style="margin:0;" onclick="continuarRP2()">Aceptar</button>
+        </div>
+    </div>
+
+    <div class="vb-alert" id="modalGrabarRP">
+        <div class="vb-header"><span>VBScript</span><span class="modal-close" onclick="cerrarModalEspecialRP()">✕</span></div>
+        <div class="vb-body">
+            <div class="vb-icon">?</div>
+            <div>Esta Seguro de Grabar la Evaluacion?</div>
+        </div>
+        <div class="vb-footer">
+            <button class="vb-btn" onclick="finalizarRP()">Sí</button>
+            <button class="vb-btn" onclick="cerrarModalEspecialRP()">No</button>
+        </div>
+    </div>
+
+    <div class="windows-modal" id="modalDeclaracion" style="width: 750px;">
+        <div class="modal-header">
+            <span>SISACT - Declaración de Conocimiento - Diálogo de página web</span>
+            <span class="modal-close" onclick="finalizarSimulacion()">✕</span>
+        </div>
+        <div class="modal-body" style="padding:0; font-family:Arial, sans-serif; font-size:11px; color:#003399; font-weight:bold;">
+            <div style="background: linear-gradient(to right, #e8f0fe, #dbe8f9); padding:5px; text-align:center; border-bottom:1px solid #a9c6e2;">Declaración de Conocimiento</div>
+            <div style="height:250px; overflow-y:scroll; padding:10px; color:black; font-weight:normal; font-size:10px; line-height:1.4;">
+                <table style="width:100%;">
+                    <tr><td style="padding-bottom:5px;">1. El trámite de portabilidad es gratuito y se ejecuta en la ventana de cambio del día siguiente de presentada la solicitud de portabilidad (excepto cuando la solicitud se presenta después de las 22 horas o se va a portar más de 10 números). La portación de números del servicio de telefonía fija está sujeta a la instalación previa del nuevo servicio.</td><td style="vertical-align:top;"><input type="checkbox" checked></td></tr>
+                    <tr><td style="padding-bottom:5px;">2. En el caso la solicitud de portabilidad se realice mediante representante, la persona natural deberá de adjuntar poder con firma legalizada ante notario público. En el caso de persona Jurídica se deberá adjuntar el certificado de vigencia de poderes donde conste el poder otorgado.</td><td style="vertical-align:top;"><input type="checkbox" checked></td></tr>
+                    <tr><td style="padding-bottom:5px;">3. Con la portabilidad se da por concluido el contrato con su actual empresa operadora del servicio de telefonía fija o móvil por lo que se deja sin efecto las tarifas y condiciones contratadas con dicha empresa; y, se contrata a una nueva empresa operadora manteniendo los mismos números señalados anteriormente con nuevas condiciones (precio, minutos incluidos, etc.) las cuales usted confirma fueron informadas</td><td style="vertical-align:top;"><input type="checkbox" checked></td></tr>
+                    <tr><td style="padding-bottom:5px;">4. Que se me ha informado que al momento de presentar la solicitud de portabilidad la empresa operadora ha realizado una evaluación de factibilidad técnica, no obstante, la procedencia de la portabilidad en el servicio fijo esta se encuentra sujeta a la instalación efectiva del servicio en el domicilio señalado, siendo que ante factores externos ajenos al control de la empresa operadora esta no será responsable por la falta de instalación, quedando sin efecto la presenta solicitud.</td><td style="vertical-align:top;"><input type="checkbox" checked></td></tr>
+                    <tr><td style="padding-bottom:5px;">5. Si voy a portar mi número del servicio de telefonía fija, mi nueva operadora debe confirmarme que tiene facilidades técnicas para darme el servicio.</td><td style="vertical-align:top;"><input type="checkbox" checked></td></tr>
+                    <tr><td style="padding-bottom:5px;">6. Si he contratado el servicio con mi actual empresa operadora a un plazo forzoso que todavia no acaba, y decido portar mi número, dicha empresa podría cobrarme penalidades derivadas a terminar mi contrato antes del vencimiento de dicho plazo forzoso. La penalidad debe de estar incluida en mi contrato. En caso de falta de pago de penalidad, cuotas de equipo o recibo de servicios, tomo conocimiento de que el Concesionario Cedente podrá solicitar al Concesionario Receptor la suspensión del servicio respecto del(os) numero(s) móvil(es) portado(s) al (los) que corresponde el monto adeudado.</td><td style="vertical-align:top;"><input type="checkbox" checked></td></tr>
+                    <tr><td style="padding-bottom:5px;">7. La suspensión solicitada por el operador cedente puede darse hasta 2 meses después de haber sido portada la línea y por un plazo máximo de 30 días calendario.</td><td style="vertical-align:top;"><input type="checkbox" checked></td></tr>
+                    <tr><td style="padding-bottom:5px;">8. La Portabilidad se refiere únicamente al servicio telefónico (móvil o fijo) y no a otro servicio (internet, tv cable, larga distancia) que podrían brindarse conjuntamente con mi servicio telefónico (paquetes), por lo que al terminar mi contrato de servicio telefónico (fijo o móvil), los otros servicios seguirán siendo brindados y cobrados por mi actual empresa operadora, pero tal vez en condiciones tarifarias diferentes, teniendo el derecho de resolver también dichos contratos y contratar los mismos, de ser el caso, a mi nueva empresa operadora.</td><td style="vertical-align:top;"><input type="checkbox" checked></td></tr>
+                    <tr><td style="padding-bottom:5px;">9. El servicio telefónico puede verse afectado por un plazo máximo de tres (3) horas mientras dure la ventana de cambio (entre las 0:00 am y 3:00 am).</td><td style="vertical-align:top;"><input type="checkbox" checked></td></tr>
+                </table>
+            </div>
+            <div style="text-align:center; padding:10px; background:#f0f0f0; border-top:1px solid #d0d0d0;">
+                <button class="sec-btn-validacion" onclick="finalizarSimulacion()">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // GLOBALES
+        let globalSecGenerada = null;
+        let globalFechaRegistro = null;
+        let globalOficinaOperacion = "RED MOV GEA";
+        let globalTipoOperacion = "PORTABILIDAD";
+        let currentRpRow = null;
+        let isPortabilidadFlow = true;
+
+        // FUNCIONES DE CONTROL DE MODALES INDEPENDIENTES
+        window.cerrarAlertaInicial = function() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('customAlertBox').style.display = 'none';
+        }
+        
+        window.cerrarServicios = function() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('modalServicios').style.display = 'none';
+        }
+
+        window.cerrarCuotas = function() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('modalCuotasRP').style.display = 'none';
+        }
+
+        window.cerrarModalEspecialRP = function() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('modalVBScriptTopeRP').style.display = 'none';
+            document.getElementById('modalReintegroRP').style.display = 'none';
+            document.getElementById('modalGrabarRP').style.display = 'none';
+        }
+
+        window.moverServicio = function(origenId, destinoId) {
+            const origen = document.getElementById(origenId);
+            const destino = document.getElementById(destinoId);
+            Array.from(origen.selectedOptions).forEach(opt => { destino.add(opt); });
+        };
+
+        // Eventos SEC Original (Portabilidad)
+        window.cerrarModalProactiva = function() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('modalProactiva').style.display = 'none';
+            let inf = document.getElementById('panelesInferiores');
+            if(inf) inf.style.display = 'block';
+            setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
+        };
+        window.continuarGrabar1 = function() { document.getElementById('modalDescuento').style.display = 'none'; document.getElementById('modalAfiliacion').style.display = 'block'; };
+        window.continuarGrabar2 = function() { document.getElementById('modalAfiliacion').style.display = 'none'; document.getElementById('modalVBScript1').style.display = 'block'; };
+        window.continuarGrabar3 = function() { document.getElementById('modalVBScript1').style.display = 'none'; document.getElementById('modalVBScript2').style.display = 'block'; };
+        window.continuarGrabar4 = function() { document.getElementById('modalVBScript2').style.display = 'none'; document.getElementById('modalDeclaracion').style.display = 'block'; };
+
+        // Eventos Renovacion Postpago
+        window.continuarRP1 = function() {
+            document.getElementById('modalVBScriptTopeRP').style.display = 'none';
+            document.getElementById('modalReintegroRP').style.display = 'block';
+        };
+        window.continuarRP2 = function() {
+            document.getElementById('modalReintegroRP').style.display = 'none';
+            document.getElementById('modalOverlay').style.display = 'none';
+            let res = document.getElementById('resultadoEvaluacionRP');
+            if(res) res.style.display = 'block';
+            setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
+        };
+        window.finalizarRP = function() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('modalGrabarRP').style.display = 'none';
+            globalSecGenerada = Math.floor(Math.random() * 90000000) + 10000000;
+            globalFechaRegistro = obtenerFechaActualFormat();
+            globalTipoOperacion = "RENOVACIÓN";
+            if(globalOficinaOperacion.includes(" - ")) { globalOficinaOperacion = globalOficinaOperacion.split(" - ")[0]; }
+            alert('SEC creada con Exito Nro SEC ' + globalSecGenerada);
+        };
+
+        window.finalizarSimulacion = function() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('modalDeclaracion').style.display = 'none';
+            globalSecGenerada = Math.floor(Math.random() * 90000000) + 10000000;
+            globalFechaRegistro = obtenerFechaActualFormat();
+            globalTipoOperacion = "PORTABILIDAD";
+            if(globalOficinaOperacion.includes(" - ")) { globalOficinaOperacion = globalOficinaOperacion.split(" - ")[0]; }
+            alert('SEC creada con Exito Nro SEC ' + globalSecGenerada);
+        };
+
+        function obtenerFechaActualFormat() {
+            const now = new Date();
+            const dia = String(now.getDate()).padStart(2, '0');
+            const mes = String(now.getMonth() + 1).padStart(2, '0');
+            const anio = now.getFullYear();
+            let horas = now.getHours();
+            const minutos = String(now.getMinutes()).padStart(2, '0');
+            const segundos = String(now.getSeconds()).padStart(2, '0');
+            const ampm = horas >= 12 ? 'p.m.' : 'a.m.';
+            horas = horas % 12;
+            horas = horas ? horas : 12; 
+            const horasStr = String(horas).padStart(2, '0');
+            return `${dia}/${mes}/${anio} ${horasStr}:${minutos}:${segundos} ${ampm}`;
+        }
+
+        // Configuración Inicial de Cierres de Modales Independientes
+        document.body.addEventListener('click', function(e) {
+            if (e.target && (e.target.id === 'btnAceptarModalInicial' || e.target.id === 'btnCerrarModalInicial')) {
+                if (isPortabilidadFlow) {
+                    cerrarAlertaInicial();
+                } else {
+                    cerrarAlertaInicial(); // Permite cerrar también en Renovación
+                }
+            }
+        });
+
+        // Transiciones Login -> Portal -> Entry -> Main
+        document.getElementById('btnAceptar').addEventListener('click', function() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const errorMsg = document.getElementById('errorMsg');
+            if (user === 'TIM\\E8713483' && pass === 'Pancitoconpollo123*') {
+                errorMsg.style.display = 'none';
+                document.getElementById('login-view').style.display = 'none';
+                document.getElementById('portal-view').style.display = 'flex';
+            } else {
+                errorMsg.style.display = 'block';
+                document.getElementById('password').value = '';
+            }
+        });
+
+        document.getElementById('btnCancelar').addEventListener('click', function() {
+            document.getElementById('username').value = ''; document.getElementById('password').value = ''; document.getElementById('errorMsg').style.display = 'none';
+        });
+        document.getElementById('btnSistemaActivaciones').addEventListener('click', function() {
+            document.getElementById('portal-view').style.display = 'none'; document.getElementById('sisact-entry-view').style.display = 'flex';
+        });
+        document.getElementById('btnIngresarSisact').addEventListener('click', function() {
+            document.getElementById('sisact-entry-view').style.display = 'none'; document.getElementById('sisact-main-view').style.display = 'flex';
+        });
+
+        // Opciones de PDV (Filtradas para CAC, GEA o SC)
+        const pdvOptions = [
+            "ALMACEN CAC BEGONIAS - P117", "BACK OFFICE CAC-MDY - 0850", "CAC ANGAMOS - 1209", "CAC AREQUIPA 2 - 1219", "CAC ASESOR - AS01", "CAC ATM UNICACHI - 5010",
+            "CAC ATOCONGO - 1173", "CAC BEGONIAS - 0006", "CAC BELLAVISTA - 1174", "CAC BENAVIDE OLO - SW3J", "CAC BRASIL - 1487", "CAC BRASIL_O - CX0N",
+            "CAC CAJAMARCA 1 - 0450", "CAC CAJAMARCA 2 - 1170", "CAC CALLAO OLO - PXLM", "CAC CAMINOS DEL INCA - 1213", "CAC CENTRO CIVICO - 1198", "CAC CHACARIL OLO - P294",
+            "CAC CHICLAYO - 0427", "CAC CHICLAYO ELIAS AGUIRRE - P219", "CAC CHICLAYO II - 1215", "CAC CHICLAYO 3 - 1216", "CAC CHIMBOTE - 1218", "CAC CHIMBOTE 2 - P218",
+            "CAC CHINCHA - 1433", "CAC CHORRILL OLO - UA7A", "CAC CHORRILL OLO - OMUA", "CAC CHORRILLOS - 0433", "CAC CIVICO OLO - P293", "CAC COLABORADORES - 1480",
+            "CAC DASSO OLO - FHQC", "CAC DEFAULT (CONFIG. VALIDACION BIO/NO BIO) - 01", "CAC DESBLOQUEO - 9995", "CAC IZAGUIRR_O - 5V3X", "CAC JAVIER PRADO - 0461", "CAC JOCKEY OLO - 821Z",
+            "CAC JOCKEY PLAZA - 0463", "CAC JOCKEY PLAZA CENTRO FINANCIERO - 1303", "CAC JR. UNION 1 - 1163", "CAC JR. UNION II - 0011", "CAC LA CULTURA - 1421", "CAC LARCO - 0008",
+            "CAC LINCE - 0007", "CAC MAGDALENA - 1210", "CAC MALL SUR OLO - PIWX", "CAC MALVITEC - P236", "CAC MEGAPLAZA - 0419", "CAC MEGAPLAZ_O - KKFS",
+            "CAC MEGAPLAZ_O - 51NG", "CAC MILENIA OLO - 105M", "CAC MILENIA OLO - B2LU", "CAC MINKA - 1082", "CAC MIRAFLOR OLO - H0D5", "CAC MIRAFLOR OLO - P295",
+            "CAC ONE - P239", "CAC ONE PREPAGO - P500", "CAC PIURA I - 0440", "CAC PIURA OPEN PLAZA - 1250", "CAC PLACITA_O - 7R76", "CAC PLACITA_O - 34EN",
+            "CAC P.NORTE OLO - QX5D", "CAC P.NORTE OLO - 5IGO", "CAC PRIMAVERA - 0418", "CAC PUCALLPA - 1214", "CAC RISSO OLO - 2LAD", "CAC RISSO OLO - 3E38",
+            "CAC RIVERA NAVARRETE - P243", "CAC S. CLARA_O - 8OTQ", "CAC S. CLARA_O - TJGT", "CAC S. JORGE_O - UZUS", "CAC S. JORGE_O - W0HE", "CAC SALAVERR OLO - DKKP",
+            "CAC SALAVERR OLO - 3I0B", "CAC SALAVERRY - 1453", "CAC SAN ANDRES CUSCO - 1252", "CAC SAN BORJA - 1428", "CAC SAN MIGUEL - 0009", "CAC SANTA ANITA - 1413",
+            "CAC SANTA CLARA - 1311", "CAC S.BORJA OLO - 1NGQ", "CAC S.BORJA OLO - A5HM", "CAC SJL - 1211", "CAC SJL OLO - S94P", "CAC SJL OLO - FSLN",
+            "CAC S.MIGUEL OLO - MZDH", "CAC S.MIGUEL OLO - P296", "CAC TARAPOTO - 0520", "CAC TRUJILLO - 0013", "CAC TRUJILLO 2 - 1039", "CAC TRUJILLO 3 - 1043",
+            "CAC TRUJILLO 4 - P215", "CAC TUMBES - 1203", "CAC UNICACHI - 1155", "CAC UNIVERSI_O - L5YQ", "CAC UNIVERSI_O - E742", "CAC VES - 1415",
+            "CAC VIRTUAL TI - ZZ01", "DBC GEA - 8JPZ", "DBC GEA CAS OLAS - 6CNU", "DBC GEA FULLCLARO - DL7U", "DBC GEA MIGRA RETE - Z9OW", "DBC GEA RENO INBOUND - 6EU5",
+            "DBC GEA RENO WSP - AW14", "DBC GEA UPGRADE - 44KG", "DBC PM GEA - E3J7", "DELIVERY GEA EMP - 1315", "DV07-TLVTS_GEA - DV07", "DV10 PREVEN GEA - BEF1",
+            "DV10 RETENCIONES GEA - B45X", "RED MOV GEA - MAO9", "RET MICLARO GEA - 5FHG", "RETE_GEA_BLINPREPAGO - 6C45", "RETE_GEA_PORTA - 9E4Z", "RETE_GEA_PREVPREPAGO - 3OJR",
+            "RETE_GEA_UPGRADE - 1M6Q", "RETENCIONES INBOUND POST MOVIL GEA - C13X", "RETE_PREVENTIVAMOVIL_GEA - T4C6", "SC JOCKEY PLAZA - 1418", "SC LIMA PLAZA NORTE - 1304", "SC MEGAPLAZA - 1296",
+            "SC NUEVO CHIMBOTE - 1295", "SC PLAZA DE LA LUNA - 1300", "SC PLAZA LIMA SUR - 1419"
+        ];
+        let opcionesHTML = '<option selected>SELECCIONE...</option>';
+        pdvOptions.forEach(opcion => { opcionesHTML += `<option>${opcion}</option>`; });
+
+        // PLANES LIST COMPLETO
+        const planesList = `
+            <option>SELECCIONE...</option>
+            <option>MAX 49.90</option><option>MAX 55.90</option><option>MAX 56.90</option><option>MAX 60.90</option>
+            <option>MAX 29.90</option><option>MAX 39.90</option><option>MAX 51.90</option>
+            <option>MAX ILIMITADO 109.90</option><option>MAX ILIMITADO 130.00</option><option>MAX ILIMITADO 159.90</option>
+            <option>MAX ILIMITADO 189.90</option><option>MAX ILIMITADO 289.90</option><option>MAX ILIMITADO 69.90</option>
+            <option>MAX ILIMITADO 79.90</option><option>MAX ILIMITADO 95.90</option>
+        `;
+
+        // CAMPAÑAS EVALUACION PDV (PORTABILIDAD)
+        const campañasEvalPDV = `
+            <option>SELECCIONE...</option>
+            <option>ALIADOS PORTA CUOTAS - ENTIDADES</option><option>COMBO FULL</option><option>COMBO FULL MENORES</option>
+            <option>DTO PORTABILIDAD POSTPAGO</option><option>FULL CLARO CONVERGENCIA</option><option>FULL CLARO ESPECIAL</option>
+            <option>LINEA ADICIONAL (R)</option><option>PLAN HFC</option><option>PORTA DTO ESTUDIANTES</option>
+            <option>PORTABILIDAD EXCLUSIVA</option><option>PORTABILIDAD LINEA ADICIONAL</option><option>PORTABILIDAD TELEVENTAS</option>
+            <option>PROMO DTO UNIVERSITARIO</option><option>PROMOCION PORTABILIDAD PRESENCIAL</option><option>TIENDA VIRTUAL POST</option>
+        `;
+
+        // CAMPAÑAS RP (CONTRATO VS CUOTAS)
+        const campañasContrato = `
+            <option>SELECCIONE...</option>
+            <option>ATAQUE COMPETENCIA</option><option>COMBO FULL</option><option>COMBO FULL MENORES</option>
+            <option>FULL CLARO RENOVACION</option>
+            <option>PROM BANBIF POST</option><option>PROM BBVA POST</option><option>PROM BCP POST</option><option>PROM CENCOSUD POST</option>
+            <option>PROM DINERS POST</option><option>PROM EQUIPOS I</option><option>PROM INTERBANK POST</option><option>PROM SANTANDER POST</option>
+            <option>PROM SCOTIABANK POST</option><option>RENO NEGOCIOS</option><option>RENOVACION EXCLUSIVA</option><option>RETENCION ESPECIAL</option>
+            <option>TIENDA VIRTUAL POST</option>
+        `;
+        
+        const campañasCuotas = `
+            <option>SELECCIONE...</option>
+            <option value="VIP">EQUIPO + PLAN VIP</option><option>FULL CLARO CUOTAS RENO</option><option value="6M">LISTA CUOTAS LITE 6M</option><option value="EXC">LISTA EXCLUSIVA CUOTAS RENO</option>
+            <option value="RET">RETENCION ESPECIAL CUOTAS</option>
+        `;
+
+        // INYECTAR: EVALUACION DESPACHO PDV
+        document.getElementById('menuEvaluacionDespachoPDV').addEventListener('click', function() {
+            globalTipoOperacion = "PORTABILIDAD";
+            isPortabilidadFlow = true;
+            const workspace = document.getElementById('sisact-workspace');
+            workspace.innerHTML = `
+                <div class="sec-form-container">
+                    <div class="sec-form-box">
+                        <div class="sec-form-title">Registro y Evaluación SEC</div>
+                        <div class="sec-form-tabs"><div class="sec-tab-active">Nueva Evaluación</div></div>
+                        <div class="sec-form-body">
+                            <table class="sec-table">
+                                <tr>
+                                    <td class="sec-label">Canal:</td>
+                                    <td><select class="sec-input sec-select-small" id="valCanal"><option selected>SELECCIONE...</option><option>CAC</option></select></td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Punto de Venta:</td>
+                                    <td colspan="3"><select class="sec-input sec-select-pdv" id="valPDV">${opcionesHTML}</select></td>
+                                </tr>
+                                <tr>
+                                    <td class="sec-label">Tipo Documento:</td>
+                                    <td>
+                                        <select class="sec-input sec-select-small" id="valTipoDoc" disabled>
+                                            <option selected>SELECCIONE...</option><option>CE</option><option>CIE</option><option>CIRE</option><option>CPP</option>
+                                            <option>CTM</option><option>DNI</option><option>PASAPORTE</option><option>RUC</option>
+                                        </select>
+                                    </td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Nro. Documento:</td>
+                                    <td><input type="text" class="sec-input" id="valNroDoc" style="width: 100px;"></td>
+                                    <td class="sec-label" style="width: 80px; text-align: right; padding-right: 10px;">Nacionalidad:</td>
+                                    <td><select class="sec-input sec-select-small" id="valNacionalidad"><option>SELECCIONE...</option><option selected>PERU</option></select></td>
+                                </tr>
+                                <tr>
+                                    <td class="sec-label">Portabilidad:</td>
+                                    <td><input type="checkbox" id="valPortabilidad"></td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Carta Poder:</td>
+                                    <td><input type="checkbox" id="valCartaPoder"></td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Tienda Virtual:</td>
+                                    <td style="display:flex; align-items:center;">
+                                        <input type="checkbox" id="valTiendaVirtual">
+                                        <span class="link-detalle" id="linkDetalle" style="display:none; margin-left: 20px;">Ver Detalle Líneas</span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <div style="text-align: center;"><button class="sec-btn-validacion" id="btnValidacionClaro">Validación Claro</button></div>
+                            <div class="loading-spinner" id="loadingSpinner"></div>
+                        </div>
+                    </div>
+
+                    <div class="sec-form-box" id="datosClienteBox" style="display:none;">
+                        <div class="sec-form-title-left">Datos del Cliente</div>
+                        <div class="sec-form-body">
+                            <table class="sec-table" style="border-spacing: 0 4px;">
+                                <tr>
+                                    <td class="sec-label" style="width: 140px;">Tipo Cliente:</td>
+                                    <td colspan="5" style="font-weight: bold; font-family: Arial, sans-serif; font-size:11px;">CLIENTE CLARO</td>
+                                </tr>
+                                <tr>
+                                    <td class="sec-label">Nombres:</td>
+                                    <td><input type="text" class="sec-input" value="HECTOR ADRIAN" disabled style="width: 150px; color:black;"></td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Apellido Paterno:</td>
+                                    <td><input type="text" class="sec-input" value="PACHERRE" disabled style="width: 150px; color:black;"></td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Apellido Materno:</td>
+                                    <td><input type="text" class="sec-input" value="TORRES" disabled style="width: 150px; color:black;"></td>
+                                </tr>
+                                <tr>
+                                    <td class="sec-label">Correo Electrónico:</td>
+                                    <td><input type="text" class="sec-input" value="ENDOCORE5@GMAIL.COM" style="width: 150px;"></td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Flag Whitelist:</td>
+                                    <td colspan="3"><input type="text" class="sec-input" value="NO" disabled style="width: 50px; color:black;"></td>
+                                </tr>
+                                <tr>
+                                    <td class="sec-label">Confirm. Correo Electrónico:</td>
+                                    <td><input type="text" class="sec-input" id="valConfirmEmail" style="width: 150px;"></td>
+                                    <td colspan="4"></td>
+                                </tr>
+                            </table>
+                            <div style="text-align: center; margin-top: 15px;">
+                                <button class="sec-btn-validacion" id="btnIngresarCondiciones" style="padding: 3px 20px;">Ingresar Condiciones de Venta</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sec-form-box" id="condicionesVentaBox" style="display:none;">
+                        <div class="sec-form-title-left">Condiciones de Venta</div>
+                        <div class="sec-form-body" style="position:relative;">
+                            <div style="color:red; font-weight:bold; font-size:10px; position:absolute; left:250px; top:10px; text-align:center;">
+                                Ofrece dos o mas líneas desde el CF 56.90 para que tu cliente obtenga 50% en su(s) líneas<br>adicional(es) de menor cargo fijo.
+                            </div>
+                            <table class="sec-table" style="width: 55%; display:inline-block;">
+                                <tr>
+                                    <td class="sec-label">Tipo Operación:</td>
+                                    <td><select class="sec-input" style="width: 140px;"><option>VENTA NORMAL / ALTA</option></select></td>
+                                </tr>
+                                <tr>
+                                    <td class="sec-label">Oferta:</td>
+                                    <td><select class="sec-input" style="width: 140px;"><option>MASIVO</option></select></td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 5px;">Caso Especial:</td>
+                                    <td><select class="sec-input" style="width: 150px;"><option>SELECCIONE...</option></select></td>
+                                </tr>
+                                <tr>
+                                    <td class="sec-label">Modalidad de Venta:</td>
+                                    <td>
+                                        <select class="sec-input" style="width: 140px;" id="valModalidadVenta">
+                                            <option>SELECCIONE...</option><option>CHIP SUELTO</option><option>CONTRATO / CODE</option><option>CUOTAS</option>
+                                        </select>
+                                    </td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 5px;">Grupo Producto:</td>
+                                    <td><select class="sec-input" style="width: 150px;"><option>SELECCIONE...</option></select></td>
+                                </tr>
+                            </table>
+                            <div style="display:inline-block; vertical-align:top; float:right; text-align:right;">
+                                <div style="color:#003399; font-weight:bold; margin-bottom:2px; font-size:11px;">Color Equipos sin stock:</div>
+                                <input type="text" class="sec-input" value="Equipo" disabled style="width:80px; text-align:center; margin-bottom:10px; color:#333;"><br>
+                                <div style="color:#003399; font-weight:bold; margin-bottom:10px; cursor:pointer; font-size:11px;">Consultar Puntos <span style="font-size:16px; vertical-align:middle;">🔍</span><br>ClaroClub</div>
+                                <div style="color:#003399; font-weight:bold; cursor:pointer; font-size:11px;">Consultar Stock <span style="font-size:16px; vertical-align:middle;">🔍</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="movilBox" style="display:none; margin-top:5px; border: 1px solid #a9c6e2; font-family:Arial, sans-serif;">
+                        <div style="display:flex;">
+                            <div style="background-color:#3b73b9; color:white; font-weight:bold; padding:4px 35px; font-size:11px; text-align:center;">Móvil</div>
+                            <div style="background-color:#b5b5b5; color:white; font-weight:bold; padding:4px 35px; font-size:11px; text-align:center; border-left:1px solid white;">BAM</div>
+                            <div style="background-color:#a2a2a2; color:white; font-weight:bold; padding:4px 35px; font-size:11px; text-align:center; border-left:1px solid white;">Fijo Inalámbrico</div>
+                        </div>
+                        <div style="padding:10px; background-color:white;">
+                            <div style="margin-bottom:10px; font-size:11px; font-weight:bold; color:#003399;">
+                                LC Disponible Móvil: <input type="text" class="sec-input" value="198.00" disabled style="width:70px; background-color:#e8f0fe; color:black; text-align:center; margin-left:10px; font-weight:normal;">
+                            </div>
+                            
+                            <div style="display:flex; align-items:center; background-color:#f0f4fa; padding:5px; border:1px solid #a9c6e2; font-size:11px; font-weight:bold; color:#003399;">
+                                <button id="btnAgregarItem" style="color:#003399; font-weight:bold; padding:2px 10px; margin-right:15px; background-color:#f8f8f8; border:1px solid #a9c6e2; cursor:pointer; font-size:11px;">Agregar Item</button>
+                                Modalidad: 
+                                <select class="sec-input" style="width: 100px; margin-left:5px; margin-right:15px;">
+                                    <option>SELECCIONE...</option><option>POSTPAGO</option><option>PREPAGO</option>
+                                </select>
+                                Operador cedente:
+                                <select class="sec-input" style="width: 250px; margin-left:5px;">
+                                    <option>SELECCIONE...</option><option>AMITEL PERU TELECOMUNICACIONES S.A.C.</option><option>DOLPHIN MOBILE</option><option>DOLPHIN TELECOM</option>
+                                    <option>ENTEL PERÚ S.A</option><option>GUINEA MOBILE (CUY)</option><option>INCACEL</option><option>OLO DEL PERÚ S.A.C.</option>
+                                    <option>SUMA MÓVIL</option><option>TELEFÓNICA DEL PERÚ S.A.A. (FIJO)</option><option>TELEFÓNICA MÓVILES S.A. (MOVIL Y TFI)</option>
+                                    <option>VIETTEL PERU S.A.C.</option><option>WINNER SYSTEMS S.A.C.(MÓVILES)</option>
+                                </select>
+                                <div style="margin-left:auto; display:flex; align-items:center; cursor:pointer;" id="btnAgregarCarrito">
+                                    Agregar al Carrito <span style="font-size:18px; margin-left:5px; vertical-align:middle;">🛒</span>
+                                </div>
+                            </div>
+
+                            <div style="border:1px solid #a9c6e2; border-top:none; min-height:80px; background-color:white; overflow-x:auto; position:relative;">
+                                <table style="width:100%; border-collapse:collapse; text-align:center; font-size:10px; font-weight:bold; color:#003399; table-layout:fixed;">
+                                    <thead style="background: linear-gradient(to bottom, #f0f4fa, #dbe8f9); border-bottom:1px solid #a9c6e2;">
+                                        <tr>
+                                            <th style="width:25px;"></th><th style="width:25px;"></th>
+                                            <th style="width:160px; padding:4px;">Campaña</th>
+                                            <th style="width:140px; padding:4px;">Plazo</th>
+                                            <th style="width:140px; padding:4px;">Familia Plan</th>
+                                            <th style="width:130px; padding:4px;">Plan</th>
+                                            <th style="width:40px; padding:4px;">Serv</th>
+                                            <th style="width:60px; padding:4px;">Cargo<br>Fijo</th>
+                                            <th style="width:60px; padding:4px;">Monto<br>Tope S/.</th>
+                                            <th style="width:80px; padding:4px;">Nro. a<br>Portar</th>
+                                            <th style="width:30px; padding:4px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tablaItemsMovilBody"></tbody>
+                                </table>
+                            </div>
+                            <div style="text-align:center; font-size:11px; font-weight:bold; color:#003399; margin-top:10px;">
+                                CF Total: <input type="text" id="valCFTotal" class="sec-input" value="0.00" disabled style="width:50px; background-color:#e8f0fe; color:black; text-align:center; margin-left:5px; font-weight:normal;">
+                            </div>
+                            <div style="background:#e1e1e1; border:1px solid #a0a0a0; display:flex; justify-content:space-between; margin-top:10px;">
+                                <span style="font-size:10px; font-weight:bold; padding:0 5px;">&lt;</span><div style="background:white; border:1px solid #a0a0a0; margin:1px 0; width:95%;"></div><span style="font-size:10px; font-weight:bold; padding:0 5px;">&gt;</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="panelesInferiores" style="display:none; margin-top:10px; font-family:Arial, sans-serif;">
+                        <div class="sec-form-box">
+                            <div class="sec-form-title-left">Resumen de Compras</div>
+                            <div style="overflow-x:scroll; background:white;">
+                                <table class="modal-table" style="width:100%; border:none;">
+                                    <tr><th>Tipo de Producto</th><th>Plazo</th><th>Plan</th><th>Campaña</th><th>Equipo</th><th>Cargo Fijo Total</th><th>Precio de Venta Equipo</th><th>Número</th><th>E.CP</th><th></th><th></th></tr>
+                                    <tr><td style="color:#003399; font-weight:bold;">MOVIL</td><td style="color:black;">SIN PLAZO/POR TIEMPO ILIMITADO</td><td style="color:black;">MAX ILIMITADO 69.90</td><td style="color:black;">PORTABILIDAD TELEVENTAS</td><td></td><td style="color:black;">69.90</td><td style="color:black;">0.00</td><td style="color:black;">939370085</td><td>🟢</td><td>✏️</td><td>❌</td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="sec-form-box" style="margin-top:10px;">
+                            <div class="sec-form-title-left">Resultado Evaluación</div>
+                            <div class="sec-form-body">
+                                <table class="sec-table">
+                                    <tr>
+                                        <td class="sec-label">Resultado:</td><td><input type="text" class="sec-input" value="APROBADO" disabled style="width:150px; text-align:right;"></td>
+                                        <td colspan="2"><button class="sec-btn-validacion" style="margin-top:0;">Ver Otras Opciones</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sec-label" style="color:red;">Comportamiento Consolidado<br>Cliente:</td><td><input type="text" class="sec-input" value="9" disabled style="width:50px; text-align:right;"></td>
+                                        <td class="sec-label" style="text-align:right;">Rango LC Disponible:</td><td><input type="text" class="sec-input" value="MAYOR A 100 SOLES" disabled style="width:150px; text-align:center;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sec-label">Tipo Garantía:</td><td><input type="text" class="sec-input" value="RENTA ADELANTADA" disabled style="width:150px; text-align:center;"></td>
+                                        <td class="sec-label" style="text-align:right;">Importe S/.:</td><td><input type="text" class="sec-input" value="0.00" disabled style="width:100px; text-align:right;"></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="sec-form-box">
+                            <div class="sec-form-title-left">Portabilidad</div>
+                            <div class="sec-form-body">
+                                <table class="sec-table">
+                                    <tr><td class="sec-label">Nro de folio de formato de portabilidad:</td><td><input type="text" class="sec-input" id="valFolioPorta" style="width:80px;"></td></tr>
+                                    <tr><td class="sec-label">Número de contacto: (*)</td><td><input type="text" class="sec-input" id="valNumContacto" style="width:80px;"></td></tr>
+                                    <tr><td class="sec-label">Adjuntar archivo: (*)</td><td><button class="sec-btn-validacion" style="margin-top:0; padding:2px 10px;">Agregar</button></td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div style="text-align:center; margin-bottom:20px; margin-top:10px;">
+                            <button class="sec-btn-validacion" id="btnGrabarFinal" style="padding:4px 40px; font-size:12px;">Grabar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('valPDV').addEventListener('change', function() {
+                if (this.value !== "SELECCIONE...") { document.getElementById('valTipoDoc').disabled = false; } 
+                else { document.getElementById('valTipoDoc').disabled = true; document.getElementById('valTipoDoc').value = "SELECCIONE..."; }
+                globalOficinaOperacion = this.value;
+            });
+
+            document.getElementById('btnValidacionClaro').addEventListener('click', function() {
+                if(document.getElementById('valNroDoc').value === '74174478') {
+                    document.getElementById('loadingSpinner').style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('loadingSpinner').style.display = 'none';
+                        document.getElementById('datosClienteBox').style.display = 'block';
+                        document.getElementById('linkDetalle').style.display = 'inline-block';
+                        document.getElementById('modalOverlay').style.display = 'block';
+                        document.getElementById('customAlertBox').style.display = 'block';
+                    }, 500);
+                }
+            });
+
+            document.getElementById('btnIngresarCondiciones').addEventListener('click', function() {
+                if(document.getElementById('valConfirmEmail').value.trim().toUpperCase() === 'ENDOCORE5@GMAIL.COM') {
+                    document.getElementById('condicionesVentaBox').style.display = 'block';
+                    document.getElementById('movilBox').style.display = 'block';
+                }
+            });
+
+            document.getElementById('btnAgregarItem').addEventListener('click', function() {
+                const tbody = document.getElementById('tablaItemsMovilBody');
+                const row = tbody.insertRow(-1);
+                row.innerHTML = `
+                    <td>✏️</td><td>❌</td>
+                    <td><select class="sec-input" style="width:145px; font-size:9px;">${campañasEvalPDV}</select></td>
+                    <td><select class="sec-input" style="width:135px; font-size:9px;"><option>SELECCIONE...</option><option>SIN PLAZO/POR TIEMPO ILIMITADO</option><option>12 MESES CONTRATO EQUIPO</option><option>18 MESES CONTRATO EQUIPO</option></select></td>
+                    <td><select class="sec-input" style="width:135px; font-size:9px;"><option>SELECCIONE...</option><option>COBERTURA INTERNACIONAL</option><option>LOCAL</option></select></td>
+                    <td><select class="sec-input plan-dropdown" style="width:125px; font-size:9px;">${planesList}</select></td>
+                    <td><span class="btn-serv-modal" style="cursor:pointer;">📝</span></td>
+                    <td><input type="text" class="sec-input val-cargo-fijo" style="width:40px;" disabled></td>
+                    <td><input type="text" class="sec-input val-monto-tope" style="width:40px;"></td>
+                    <td><input type="text" class="sec-input val-nro-portar" style="width:70px;"></td>
+                    <td></td>
+                `;
+                row.querySelector('.plan-dropdown').addEventListener('change', function() {
+                    let c = this.value.replace(/[^\d.]/g, '');
+                    row.querySelector('.val-cargo-fijo').value = c;
+                    document.getElementById('valCFTotal').value = c;
+                });
+            });
+
+            document.getElementById('tablaItemsMovilBody').addEventListener('click', function(e) {
+                if (e.target.classList.contains('btn-serv-modal')) {
+                    document.getElementById('modalOverlay').style.display = 'block';
+                    document.getElementById('modalServicios').style.display = 'block';
+                }
+            });
+
+            document.getElementById('btnAgregarCarrito').addEventListener('click', function() {
+                document.getElementById('modalOverlay').style.display = 'block';
+                document.getElementById('modalProactiva').style.display = 'block';
+            });
+
+            document.getElementById('btnGrabarFinal').addEventListener('click', function() {
+                if(document.getElementById('valFolioPorta').value === '1' && document.getElementById('valNumContacto').value === '966310655') {
+                    document.getElementById('modalOverlay').style.display = 'block';
+                    document.getElementById('modalDescuento').style.display = 'block';
+                }
+            });
+        });
+
+        // INYECTAR: RENOVACION POSTPAGO (COMPLETAMENTE ALINEADA A TUS IMAGENES)
+        document.getElementById('menuRenovacionPostpago').addEventListener('click', function() {
+            globalTipoOperacion = "RENOVACIÓN";
+            isPortabilidadFlow = false;
+            const workspace = document.getElementById('sisact-workspace');
+            workspace.innerHTML = `
+                <div class="sec-form-container">
+                    <div class="sec-form-box">
+                        <div class="sec-form-title">Renovación PostPago</div>
+                        <div class="sec-form-tabs"><div class="sec-tab-active">Nueva Evaluación</div></div>
+                        <div class="sec-form-body">
+                            <table class="sec-table">
+                                <tr>
+                                    <td class="sec-label">Canal:</td>
+                                    <td><select class="sec-input sec-select-small" id="valCanalRP"><option selected>SELECCIONE...</option><option>CAC</option></select></td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Punto de Venta:</td>
+                                    <td><select class="sec-input sec-select-pdv" id="valPDVRP" style="width:250px;">${opcionesHTML}</select></td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Vendedor:</td>
+                                    <td><select class="sec-input" style="width:200px;"><option></option><option selected>E8713483 - Usuario de Prueba</option></select></td>
+                                </tr>
+                                <tr>
+                                    <td class="sec-label">Tipo Documento:</td>
+                                    <td>
+                                        <select class="sec-input sec-select-small" id="valTipoDocRP" disabled>
+                                            <option selected>-- SELECCIONAR --</option><option>CE</option><option>CIE</option><option>CIRE</option><option>CPP</option>
+                                            <option>CTM</option><option>DNI</option><option>PASAPORTE</option><option>RUC</option>
+                                        </select>
+                                    </td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Nro. Documento:</td>
+                                    <td><input type="text" class="sec-input" id="valNroDocRP" style="width: 100px;"></td>
+                                    <td class="sec-label" style="text-align: right; padding-right: 10px;">Nro Línea:</td>
+                                    <td><input type="text" class="sec-input" id="valNroLineaRP" style="width: 100px;"></td>
+                                </tr>
+                            </table>
+                            <div style="text-align: center;"><button class="sec-btn-validacion" id="btnValidacionClaroRP">Validación Claro</button></div>
+                            <div class="loading-spinner" id="loadingSpinnerRP"></div>
+                        </div>
+                    </div>
+
+                    <div id="panelesRenovacion" style="display:none;">
+                        
+                        <div class="sec-form-box">
+                            <div class="sec-form-title-left">Datos del Cliente</div>
+                            <div class="sec-form-body">
+                                <table class="sec-table" style="width:100%; border-collapse:collapse;">
+                                    <tr>
+                                        <td class="sec-label" style="width:140px;">Tipo Cliente:</td>
+                                        <td colspan="5" style="font-weight:bold; font-size:11px; color:#003399;">CLIENTE CLARO</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sec-label">Nombres:</td>
+                                        <td><input type="text" class="sec-input" value="HECTOR ADRIAN" disabled style="width: 180px; color:black; background:#e8f0fe;"></td>
+                                        <td class="sec-label" style="text-align: right; padding-right: 10px;">Apellido Paterno:</td>
+                                        <td><input type="text" class="sec-input" value="PACHERRE" disabled style="width: 180px; color:black; background:#e8f0fe;"></td>
+                                        <td class="sec-label" style="text-align: right; padding-right: 10px;">Apellido Materno:</td>
+                                        <td><input type="text" class="sec-input" value="TORRES" disabled style="width: 180px; color:black; background:#e8f0fe;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sec-label">Correo Electrónico:</td>
+                                        <td><input type="text" class="sec-input" value="ENDOCORE5@GMAIL.COM" style="width: 180px;"></td>
+                                        <td class="sec-label" style="text-align: right; padding-right: 10px;">Flag Whitelist:</td>
+                                        <td colspan="3"><input type="text" class="sec-input" value="NO" disabled style="width: 180px; color:black; background:#e8f0fe;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sec-label">Confirm. Correo:</td>
+                                        <td><input type="text" class="sec-input" id="valConfirmEmailRP" style="width: 180px;"></td>
+                                        <td colspan="4"></td>
+                                    </tr>
+                                </table>
+                                <div style="text-align:center; margin-top:10px;"><button class="sec-btn-validacion" id="btnIngresarCondicionesRP">Ingresar Condiciones de Venta</button></div>
+                            </div>
+                        </div>
+
+                        <div class="sec-form-box" id="datosLineaRP" style="display:none; margin-top:10px;">
+                            <div class="sec-form-title-left" style="background:#e8f0fe; border-bottom:1px solid #a9c6e2; padding:4px 10px; font-weight:bold; color:#003399;">Datos de la Línea</div>
+                            <div class="sec-form-body">
+                                <table class="sec-table" style="width:100%;">
+                                    <tr>
+                                        <td class="sec-label" style="width:100px;">Nro Línea:</td>
+                                        <td style="width:120px;"><input type="text" class="sec-input" value="966310655" disabled style="width: 100px; color:black; background:#e8f0fe;"></td>
+                                        <td class="sec-label" style="text-align:right;">Plan Comercial</td>
+                                        <td><input type="text" class="sec-input" value="MAX 39.90" disabled style="width: 140px; color:black; background:#e8f0fe;"></td>
+                                        <td class="sec-label" style="text-align:right;">Plan Base</td>
+                                        <td><input type="text" class="sec-input" value="MAX 39.90" disabled style="width: 100px; color:black; background:#e8f0fe;"></td>
+                                        <td class="sec-label" style="text-align:right;">Cargo Fijo</td>
+                                        <td><input type="text" class="sec-input" value="39.90" disabled style="width: 50px; color:black; background:#e8f0fe;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sec-label">IMSI:</td>
+                                        <td><input type="text" class="sec-input" value="716101700605618" disabled style="width: 100px; color:black; background:#e8f0fe;"></td>
+                                        <td class="sec-label" rowspan="3" style="vertical-align:top; text-align:right;">Servicios Activos</td>
+                                        <td colspan="5" rowspan="3">
+                                            <textarea class="sec-input" disabled style="width:100%; height:60px; resize:none; background:#e8f0fe; color:black; font-family:monospace; padding:5px;">Whatsapp</textarea>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sec-label">Segmento:</td>
+                                        <td><input type="text" class="sec-input" disabled style="width: 100px; color:black; background:#e8f0fe;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sec-label">Ciclo Facturación</td>
+                                        <td><input type="text" class="sec-input" value="11" disabled style="width: 100px; color:black; background:#e8f0fe;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sec-label">Limite de Credito</td>
+                                        <td><input type="text" class="sec-input" value="178.88" disabled style="width: 100px; color:black; background:#e8f0fe;"></td>
+                                        <td class="sec-label" style="text-align:right;">Tope Consumo Actual:</td>
+                                        <td colspan="3"><input type="text" class="sec-input" value="CONSUMO EXACTO" disabled style="width: 150px; color:black; background:#e8f0fe;"></td>
+                                        <td class="sec-label" style="text-align:right;">Cargo Fijo Tope:</td>
+                                        <td><input type="text" class="sec-input" value="0.00" disabled style="width: 50px; color:black; background:#e8f0fe;"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="sec-label" colspan="2">Motivo de Activación de línea a Renovar:</td>
+                                        <td><input type="text" class="sec-input" value="PORTABILIDAD" disabled style="width: 120px; color:black; background:#e8f0fe;"></td>
+                                        <td class="sec-label" colspan="2" style="text-align:right;">Modalidad Cedente de línea a Renovar:</td>
+                                        <td><input type="text" class="sec-input" value="POSTPAGO" disabled style="width: 100px; color:black; background:#e8f0fe;"></td>
+                                        <td class="sec-label" style="text-align:right;">Monto de Cuota Actual:</td>
+                                        <td><input type="text" class="sec-input" value="0" disabled style="width: 50px; color:black; background:#e8f0fe;"></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="sec-form-box" id="condicionesYMovilRP" style="display:none; margin-top:10px;">
+                            <div class="sec-form-title-left">Condiciones de Venta</div>
+                            <div class="sec-form-body" style="padding:10px 15px;">
+                                <div style="display:flex; justify-content:space-between;">
+                                    <table class="sec-table" style="width: 65%;">
+                                        <tr>
+                                            <td class="sec-label">Tipo Operación:</td>
+                                            <td><select class="sec-input" style="width: 140px;"><option>RENOVACIÓN</option></select></td>
+                                            <td colspan="2" style="color:red; font-weight:bold; font-size:10px; padding-left:10px;">
+                                                Ofrece dos o mas líneas desde el CF 56.90 para que tu cliente obtenga 50% en su(s) líneas<br>adicional(es) de menor cargo fijo.
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sec-label">Oferta:</td>
+                                            <td><select class="sec-input" style="width: 140px;"><option>MASIVO</option></select></td>
+                                            <td class="sec-label" style="text-align: right; padding-right: 5px;">Tipo Renovación:</td>
+                                            <td>
+                                                <select class="sec-input" style="width: 150px;">
+                                                    <option selected>SELECCIONAR</option>
+                                                    <option>REGULAR</option>
+                                                    <option>RETENIDO</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="sec-label">Modalidad de Venta:</td>
+                                            <td>
+                                                <select class="sec-input" id="valModalidadVentaRP" style="width: 140px;">
+                                                    <option value="CONTRATO / CODE" selected>CONTRATO / CODE</option>
+                                                    <option value="CUOTAS">CUOTAS</option>
+                                                </select>
+                                            </td>
+                                            <td class="sec-label" style="text-align: right; padding-right: 5px;">Grupo Producto:</td>
+                                            <td><select class="sec-input" style="width: 150px;"><option>-- SELECCIONAR --</option></select></td>
+                                        </tr>
+                                    </table>
+                                    <div style="text-align:right;">
+                                        <div style="color:#003399; font-weight:bold; margin-bottom:2px; font-size:11px;">Color Equipos sin stock:</div>
+                                        <input type="text" class="sec-input" value="Equipo" disabled style="width:80px; text-align:center; margin-bottom:10px; color:#003399; font-weight:bold; border:1px solid #003399;"><br>
+                                        <div style="color:#003399; font-weight:bold; margin-bottom:10px; cursor:pointer; font-size:11px;">Consultar Stock: <span style="font-size:18px; vertical-align:middle;">🔍</span></div>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top:5px; border: 1px solid #a9c6e2; font-family:Arial, sans-serif;">
+                                    <div style="display:flex;">
+                                        <div style="background-color:#3b73b9; color:white; font-weight:bold; padding:4px 35px; font-size:11px; text-align:center;">Móvil</div>
+                                        <div style="background-color:#b5b5b5; color:white; font-weight:bold; padding:4px 35px; font-size:11px; text-align:center; border-left:1px solid white;">BAM</div>
+                                        <div style="background-color:#a2a2a2; color:white; font-weight:bold; padding:4px 35px; font-size:11px; text-align:center; border-left:1px solid white;">Internet<br>Inalámbrico</div>
+                                    </div>
+                                    <div style="padding:10px; background-color:white;" id="contenedorTablaRP">
+                                        </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('valPDVRP').addEventListener('change', function() {
+                document.getElementById('valTipoDocRP').disabled = this.value === "SELECCIONE...";
+                globalOficinaOperacion = this.value;
+            });
+
+            document.getElementById('btnValidacionClaroRP').addEventListener('click', function() {
+                if(document.getElementById('valNroDocRP').value === '74174478' && document.getElementById('valNroLineaRP').value === '966310655') {
+                    document.getElementById('loadingSpinnerRP').style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('loadingSpinnerRP').style.display = 'none';
+                        document.getElementById('panelesRenovacion').style.display = 'block';
+                        document.getElementById('modalOverlay').style.display = 'block';
+                        document.getElementById('customAlertBox').style.display = 'block';
+                    }, 500);
+                }
+            });
+
+            document.getElementById('btnIngresarCondicionesRP').addEventListener('click', function() {
+                if(document.getElementById('valConfirmEmailRP').value.trim().toUpperCase() === 'ENDOCORE5@GMAIL.COM') {
+                    document.getElementById('datosLineaRP').style.display = 'block';
+                    document.getElementById('condicionesYMovilRP').style.display = 'block';
+                    renderTablaRP(); 
+                }
+            });
+
+            document.getElementById('valModalidadVentaRP').addEventListener('change', function() {
+                renderTablaRP();
+            });
+
+            // Función Maestra para Renderizar las tablas respetando la modalidad
+            function renderTablaRP() {
+                const modo = document.getElementById('valModalidadVentaRP').value;
+                const contenedor = document.getElementById('contenedorTablaRP');
+                
+                if (modo === "CONTRATO / CODE") {
+                    contenedor.innerHTML = `
+                        <button class="sec-btn-validacion" id="btnAgregarItemRP" style="margin-bottom:10px;">Agregar Item</button>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; text-align:center; font-size:10px; font-weight:bold; color:#003399;">
+                                <thead style="background: linear-gradient(to bottom, #f0f4fa, #dbe8f9); border-bottom:1px solid #a9c6e2;">
+                                    <tr>
+                                        <th style="width:25px; padding:4px;"></th><th style="width:25px; padding:4px;"></th>
+                                        <th style="padding:4px;">Campaña</th><th style="padding:4px;">Plazo</th><th style="padding:4px;">Familia Plan</th><th style="padding:4px;">Plan</th><th style="padding:4px;">Serv</th>
+                                        <th style="padding:4px;">Cargo Fijo</th><th style="padding:4px;">Monto Tope S/.</th><th style="padding:4px;">Claro Puntos</th><th style="padding:4px;">Equipo</th><th style="padding:4px;">Precio Equipo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bodyRP"></tbody>
+                            </table>
+                        </div>
+                    `;
+
+                    document.getElementById('btnAgregarItemRP').addEventListener('click', function() {
+                        const tbody = document.getElementById('bodyRP');
+                        const row = tbody.insertRow(-1);
+                        row.style.borderBottom = "1px solid #a9c6e2";
+                        row.innerHTML = `
+                            <td>✏️</td><td>❌</td>
+                            <td><select class="sec-input" style="width:120px; font-size:9px;">${campañasContrato}</select></td>
+                            <td><select class="sec-input" style="width:140px; font-size:9px;"><option>SELECCIONE...</option><option>12 MESES CONTRATO EQUIPO</option><option>18 MESES CONTRATO EQUIPO</option><option>SIN PLAZO/POR TIEMPO ILIMITADO</option></select></td>
+                            <td><select class="sec-input" style="width:130px; font-size:9px;"><option>SELECCIONE...</option><option>COBERTURA INTERNACIONAL</option><option>LOCAL</option></select></td>
+                            <td><select class="sec-input plan-dropdown" style="width:110px; font-size:9px;">${planesList}</select></td>
+                            <td><span class="btn-serv-modal" style="cursor:pointer; font-size:14px;">📝</span></td>
+                            <td><input type="text" class="sec-input val-cargo-fijo" value="0.00" style="width:40px; background:#e8f0fe; color:black; text-align:center;" disabled></td>
+                            <td><input type="text" class="sec-input" style="width:40px; text-align:center;"></td>
+                            <td><span style="cursor:pointer; font-size:14px;">📝</span></td>
+                            <td><input type="text" class="sec-input eq-rp-input" list="listaEquipos" style="width:100px;"></td>
+                            <td><input type="text" class="sec-input val-precio-equipo" value="0" style="width:45px; background:#e8f0fe; color:black; text-align:center;" disabled></td>
+                        `;
+                        vincularAutoPreciosRP(row, false);
+                    });
+
+                } else if (modo === "CUOTAS") {
+                    contenedor.innerHTML = `
+                        <button class="sec-btn-validacion" id="btnAgregarItemRP" style="margin-bottom:10px;">Agregar Item</button>
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%; border-collapse:collapse; text-align:center; font-size:10px; font-weight:bold; color:#003399;">
+                                <thead style="background: linear-gradient(to bottom, #f0f4fa, #dbe8f9); border-bottom:1px solid #a9c6e2;">
+                                    <tr>
+                                        <th style="width:25px; padding:4px;"></th><th style="width:25px; padding:4px;"></th>
+                                        <th style="padding:4px;">Campaña</th><th style="padding:4px;">Plazo</th><th style="padding:4px;">Familia Plan</th><th style="padding:4px;">Plan</th><th style="padding:4px;">Serv</th>
+                                        <th style="padding:4px;">Cargo Fijo</th><th style="padding:4px;">Monto Tope S/.</th><th style="padding:4px;">Claro Puntos</th><th style="padding:4px;">Equipo</th><th style="padding:4px;">Cuotas</th><th style="padding:4px;">Precio Equipo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bodyRP"></tbody>
+                            </table>
+                        </div>
+                    `;
+
+                    document.getElementById('btnAgregarItemRP').addEventListener('click', function() {
+                        const tbody = document.getElementById('bodyRP');
+                        const row = tbody.insertRow(-1);
+                        row.style.borderBottom = "1px solid #a9c6e2";
+                        row.innerHTML = `
+                            <td>✏️</td><td>❌</td>
+                            <td><select class="sec-input" style="width:110px; font-size:9px;">${campañasCuotas}</select></td>
+                            <td><select class="sec-input" style="width:120px; font-size:9px;"><option>SELECCIONE...</option><option>12 MESES CONTRATO EQUIPO</option><option>18 MESES CONTRATO EQUIPO</option><option>SIN PLAZO/POR TIEMPO ILIMITADO</option></select></td>
+                            <td><select class="sec-input" style="width:120px; font-size:9px;"><option>SELECCIONE...</option><option>COBERTURA INTERNACIONAL</option><option>LOCAL</option></select></td>
+                            <td><select class="sec-input plan-dropdown" style="width:115px; font-size:9px;">${planesList}</select></td>
+                            <td><span class="btn-serv-modal" style="cursor:pointer; font-size:14px;">📝</span></td>
+                            <td><input type="text" class="sec-input val-cargo-fijo" value="0.00" style="width:35px; background:#e8f0fe; color:black; text-align:center;" disabled></td>
+                            <td><input type="text" class="sec-input" style="width:35px; text-align:center;"></td>
+                            <td><span style="cursor:pointer; font-size:14px;">📝</span></td>
+                            <td><input type="text" class="sec-input eq-rp-input" list="listaEquipos" style="width:100px;"></td>
+                            <td><span class="btn-cuotas-modal" style="cursor:pointer; color:red; font-size:14px;">📝</span></td>
+                            <td><input type="text" class="sec-input val-precio-equipo" value="0" style="width:45px; background:#e8f0fe; color:black; text-align:center;" disabled></td>
+                        `;
+                        vincularAutoPreciosRP(row, true);
+                    });
+                }
+
+                // Inyectar o resetear barra inferior totalizadora
+                if(!document.getElementById('divCFTotalContenedorRP')){
+                    let footerDiv = document.createElement('div');
+                    footerDiv.id = "divCFTotalContenedorRP";
+                    footerDiv.style.textAlign = "center";
+                    footerDiv.style.marginTop = "10px";
+                    footerDiv.innerHTML = `
+                        <div style="font-size:11px; font-weight:bold; color:#003399;">
+                            CF Total: <input type="text" id="valCFTotalRP" class="sec-input" value="0.00" disabled style="width:60px; text-align:center; background:#e8f0fe; color:black;">
+                        </div>
+                        <div style="background:#e1e1e1; border:1px solid #a0a0a0; display:flex; justify-content:space-between; margin-top:10px; margin-bottom:20px;">
+                            <span style="font-size:10px; font-weight:bold; padding:0 5px;">&lt;</span><div style="background:white; border:1px solid #a0a0a0; margin:1px 0; width:95%;"></div><span style="font-size:10px; font-weight:bold; padding:0 5px;">&gt;</span>
+                        </div>
+                        <button class="sec-btn-validacion" id="btnTriggerEvaluarRP" style="margin-top:10px; padding:4px 40px; font-size:12px;">Evaluar</button>
+                        
+                        <div id="resultadoEvaluacionRP" style="display:none; margin-top:15px; border:1px solid #a9c6e2; background:white; padding:10px; text-align:left;">
+                            <div style="color:#003399; font-weight:bold; font-size:12px; margin-bottom:10px; border-bottom:1px solid #a9c6e2; padding-bottom:5px;">Resultado Evaluación</div>
+                            <table class="sec-table" style="width:100%;">
+                                <tr>
+                                    <td class="sec-label" style="width:120px;">Resultado:</td>
+                                    <td><input type="text" class="sec-input" value="APROBADO" disabled style="width:120px; text-align:right; color:black; background:#e8f0fe;"></td>
+                                    <td class="sec-label" style="color:red; text-align:right;">Comportamiento Consolidado Cliente:</td>
+                                    <td><input type="text" class="sec-input" value="8" disabled style="width:50px; text-align:right; color:black; background:#e8f0fe;"></td>
+                                </tr>
+                                <tr>
+                                    <td class="sec-label">Tipo Garantía:</td>
+                                    <td><input type="text" class="sec-input" value="RENTA ADELANTADA" disabled style="width:120px; text-align:center; color:black; background:#e8f0fe;"></td>
+                                    <td class="sec-label" style="text-align:right;">Importe S/.:</td>
+                                    <td><input type="text" class="sec-input" value="0.00" disabled style="width:80px; text-align:right; color:black; background:#e8f0fe;"></td>
+                                </tr>
+                            </table>
+                            <div style="text-align: center; margin-top: 15px;">
+                                <button class="sec-btn-validacion" id="btnGrabarRP" style="padding: 4px 40px; font-size:12px;">Grabar</button>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('condicionesYMovilRP').appendChild(footerDiv);
+
+                    // Vincular Evaluar
+                    document.getElementById('btnTriggerEvaluarRP').addEventListener('click', function() {
+                        document.getElementById('modalOverlay').style.display = 'block';
+                        document.getElementById('modalVBScriptTopeRP').style.display = 'block';
+                    });
+
+                    // Vincular Grabar
+                    document.getElementById('btnGrabarRP').addEventListener('click', function() {
+                        document.getElementById('modalOverlay').style.display = 'block';
+                        document.getElementById('modalGrabarRP').style.display = 'block';
+                    });
+                } else {
+                    document.getElementById('valCFTotalRP').value = "0.00";
+                    document.getElementById('resultadoEvaluacionRP').style.display = "none";
+                }
+            }
+
+            // Inyectar el auto-fill inteligente de precios por marcas y cálculos dinámicos de cuotas
+            function vincularAutoPreciosRP(row, permiteCuotas) {
+                const eqInput = row.querySelector('.eq-rp-input');
+                const planSelect = row.querySelector('.plan-dropdown');
+
+                planSelect.addEventListener('change', function() {
+                    let c = this.value.replace(/[^\d.]/g, '');
+                    row.querySelector('.val-cargo-fijo').value = c ? c : "0.00";
+                    actualizarCF(row);
+                });
+                
+                eqInput.addEventListener('change', function() {
+                    let val = this.value;
+                    let precio = 0;
+                    if(val === 'APP IPH15128GBBLK BK') {
+                        precio = permiteCuotas ? 4604 : 2439;
+                    } else if(val.startsWith('APP')) {
+                        precio = Math.floor(Math.random() * (6000 - 2440 + 1)) + 2440;
+                    } else if(val.startsWith('XIA') || val.startsWith('SMG') || val.startsWith('HOR')) {
+                        precio = Math.floor(Math.random() * (1500 - 1000 + 1)) + 1000;
+                    }
+                    
+                    let pField = row.querySelector('.val-precio-equipo');
+                    if(pField) pField.value = precio;
+                    actualizarCF(row);
+                });
+            }
+
+            // Delegacion Global de Clicks en la Tabla RP
+            document.getElementById('contenedorTablaRP').addEventListener('click', function(e) {
+                if (e.target.classList.contains('btn-serv-modal')) {
+                    document.getElementById('modalOverlay').style.display = 'block';
+                    document.getElementById('modalServicios').style.display = 'block';
+                }
+                if (e.target.classList.contains('btn-cuotas-modal')) {
+                    currentRpRow = e.target.closest('tr');
+                    let p = parseFloat(currentRpRow.querySelector('.val-precio-equipo').value) || 0;
+                    document.getElementById('valMontoCuotaCalc').value = (p / 12).toFixed(2);
+                    document.getElementById('modalOverlay').style.display = 'block';
+                    document.getElementById('modalCuotasRP').style.display = 'block';
+                }
+            });
+
+            function actualizarCF(row) {
+                let cf = parseFloat(row.querySelector('.val-cargo-fijo').value) || 0;
+                let cuota = 0;
+                if(document.getElementById('valModalidadVentaRP').value === "CUOTAS") {
+                    cuota = parseFloat(document.getElementById('valMontoCuotaCalc').value) || 0;
+                }
+                document.getElementById('valCFTotalRP').value = (cf + cuota).toFixed(2);
+            }
+
+            document.getElementById('btnGuardarCuotasRP').addEventListener('click', function() {
+                if(currentRpRow) actualizarCF(currentRpRow);
+                window.cerrarModales();
+            });
+        });
+
+        // PANTALLA CONSULTA SEC
+        document.getElementById('menuConsultaSEC').addEventListener('click', function() {
+            const workspace = document.getElementById('sisact-workspace');
+            workspace.innerHTML = `
+                <div class="sec-form-container">
+                    <div class="sec-form-box">
+                        <div class="sec-form-title-left" style="background:#dbe8f9; color:#003399; font-size:14px;">Consulta de Evaluaciones</div>
+                        <div class="sec-form-body" style="padding-top:5px; padding-bottom:5px;">
+                            <div style="display:flex; align-items:center; gap:10px; font-weight:bold; color:#003399; font-size:11px; margin-bottom:10px;">
+                                Nro de Evaluacion: <input type="text" class="sec-input" style="width:100px;">
+                                Tipo Documento: 
+                                <select class="sec-input" id="valBusquedaTipoDoc">
+                                    <option>-- SELECCIONAR --</option><option>CE</option><option>CIE</option><option>CIP</option>
+                                    <option>CIRE</option><option>CPP</option><option>CTM</option><option>DNI</option>
+                                    <option>PASAPORTE</option><option>RUC</option>
+                                </select>
+                                Nro de Documento: <input type="text" class="sec-input" id="valBusquedaDoc" style="width:100px; color:black;">
+                                <button class="sec-btn-validacion" id="btnConsultarSEC" style="margin:0;">Consultar</button>
+                            </div>
+                        </div>
+
+                        <div id="consultaResultados"></div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('btnConsultarSEC').addEventListener('click', function() {
+                if(document.getElementById('valBusquedaDoc').value === '74174478') {
+                    let filaDinamica = '';
+                    let contador = 4;
+                    if (globalSecGenerada && globalFechaRegistro) {
+                        contador = 5;
+                        filaDinamica = `
+                            <tr>
+                                <td>🔍📄</td><td>${globalSecGenerada}</td><td>${globalTipoOperacion}</td><td>APROBADO</td><td>DNI</td><td>74174478</td><td>HECTOR ADRIAN PACHERRE TORRES</td><td>DESPACHO PDV</td><td>${globalOficinaOperacion}</td><td></td><td></td><td>${globalFechaRegistro}</td><td>MOVIL</td><td></td><td>RENTA ADELANTADA</td><td>0</td><td></td>
+                            </tr>
+                        `;
+                    }
+                    document.getElementById('consultaResultados').innerHTML = `
+                        <div style="width:100%; overflow-x:auto;">
+                            <table class="consulta-table">
+                                <tr><th></th><th>Nro SEC</th><th>Tipo Operación</th><th>Estado</th><th>Tipo Doc</th><th>Nro Doc</th><th>Nombre / Razón Social</th><th>Despacho</th><th>Oficina Venta</th><th>Caso Esp.</th><th>Motivo Rechazo</th><th>Fecha Registro</th><th>Tipo Producto</th><th>Obs Comisiones</th><th>Tipo Garantía</th><th>Monto Garantía</th><th>Despacho Express</th></tr>
+                                ${filaDinamica}
+                                <tr><td>🔍📄</td><td>79269427</td><td>RENOVACIÓN</td><td>APROBADO</td><td>DNI</td><td>74174478</td><td>HECTOR ADRIAN PACHERRE TORRES</td><td>DESPACHO PDV</td><td>DELIMA MALL DEL SUR</td><td></td><td></td><td>12/12/2023 08:10:02 p.m.</td><td>MOVIL</td><td></td><td>RENTA ADELANTADA</td><td>0</td><td></td></tr>
+                                <tr><td>🔍📄</td><td>74736748</td><td>MIGRACION</td><td>APROBADO</td><td>DNI</td><td>74174478</td><td>HECTOR ADRIAN PACHERRE TORRES</td><td>DESPACHO PDV</td><td>TLVTAS_POSTVTA_MDY</td><td></td><td></td><td>11/06/2023 08:50:51 p.m.</td><td>MOVIL</td><td></td><td>RENTA ADELANTADA</td><td>0</td><td></td></tr>
+                                <tr><td>🔍📄</td><td>73165593</td><td>PORTABILIDAD</td><td>APROBADO</td><td>DNI</td><td>74174478</td><td>HECTOR ADRIAN PACHERRE TORRES</td><td>DESPACHO PDV</td><td>SOLOTELL VES</td><td></td><td></td><td>10/04/2023 12:38:58 p.m.</td><td>MOVIL</td><td></td><td>RENTA ADELANTADA</td><td>0</td><td></td></tr>
+                                <tr><td>🔍📄</td><td>30442026</td><td>VENTA NORMAL / ALTA</td><td>APROBADO</td><td>DNI</td><td>74174478</td><td>HECTOR ADRIAN PACHERRE TORRES</td><td>DESPACHO PDV</td><td>MEGACELL_D.JPLAZA</td><td></td><td></td><td>29/12/2017 04:47:51 p.m.</td><td>MOVIL</td><td></td><td>RENTA ADELANTADA</td><td>158</td><td></td></tr>
+                            </table>
+                        </div>
+                        <div style="padding:10px; color:red; font-weight:bold;">${contador} registro(s) encontrado(s)</div>
+                        <div style="background:#e1e1e1; border:1px solid #a0a0a0; display:flex; justify-content:space-between; margin:10px;">
+                            <span style="font-size:10px; font-weight:bold; padding:0 5px;">&lt;</span><div style="background:white; border:1px solid #a0a0a0; margin:1px 0; width:95%;"></div><span style="font-size:10px; font-weight:bold; padding:0 5px;">&gt;</span>
+                        </div>
+                    `;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
